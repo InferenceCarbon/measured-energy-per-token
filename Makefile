@@ -14,7 +14,7 @@ arxiv: tables      ## source bundle for arXiv: dist/arxiv.tar.gz (paper.tex, pap
 	cd paper && $(TECTONIC) -X compile --keep-intermediates --outdir ../dist/arxiv paper.tex
 	cp paper/paper.tex paper/refs.bib dist/arxiv/ && cp -R paper/tables dist/arxiv/tables && mkdir -p dist/arxiv/figs && cp paper/figs/*.pdf dist/arxiv/figs/
 	cd dist/arxiv && rm -f *.aux *.log *.out *.blg paper.pdf tables/*.md tables/*.csv tables/*.json
-	tar -C dist/arxiv -czf dist/arxiv.tar.gz .
+	cd dist/arxiv && COPYFILE_DISABLE=1 tar -czf ../arxiv.tar.gz paper.tex paper.bbl refs.bib tables figs
 	@echo "dist/arxiv.tar.gz ready"
 
 latency:           ## latency table from the per-request records: make latency STORE=/path/to/raw
