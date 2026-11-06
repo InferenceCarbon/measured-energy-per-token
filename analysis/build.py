@@ -1053,11 +1053,11 @@ def factors(o1, o2, o4, o6, o7, df, head) -> pd.DataFrame:
     # the generic writer sizes columns from the longest cell; this table needs wrapped text columns
     body = "\n".join(" & ".join(_tex_escape(str(x)) for x in r.values()) + r" \\" for r in rows)
     (TABLES / "factors.tex").write_text(
-        "\\begin{table}[t]\n\\centering\n\\footnotesize\n\\setlength{\\tabcolsep}{4pt}\n"
+        "\\begin{landscape}\n\\begin{table}[p]\n\\centering\n\\footnotesize\n\\setlength{\\tabcolsep}{4pt}\n"
         "\\caption{" + (TABLES / "factors.md").read_text().split("**")[1] + "}\\label{tab:factors}\n"
-        "\\begin{tabular}{>{\\raggedright\\arraybackslash}p{1.9cm}>{\\raggedright\\arraybackslash}p{3.0cm}lr>{\\raggedright\\arraybackslash}p{1.9cm}>{\\raggedright\\arraybackslash}p{3.1cm}}\n"
+        "\\begin{tabular}{>{\\raggedright\\arraybackslash}p{2.5cm}>{\\raggedright\\arraybackslash}p{6.0cm}lr>{\\raggedright\\arraybackslash}p{2.7cm}>{\\raggedright\\arraybackslash}p{4.9cm}}\n"
         "\\toprule\nFactor & Comparison & \\makecell[l]{Effect, median\\\\(range)} & \\makecell[r]{Compar-\\\\isons} & \\makecell[l]{Per\\\\doubling} & What the data tell us \\\\\n\\midrule\n"
-        + body + "\n\\bottomrule\n\\end{tabular}\n\\end{table}\n")
+        + body + "\n\\bottomrule\n\\end{tabular}\n\\end{table}\n\\end{landscape}\n")
     head["factors"] = f.to_dict("records")
     return f
 

@@ -1,9 +1,10 @@
-\begin{table}[t]
+\begin{landscape}
+\begin{table}[p]
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
 \caption{The measured factors compared on one scale. Effect is the multiplier on energy per output token (per request for the cached prefix) between the two settings named in the Comparison column, as a ratio of central values: the median over the model and accelerator combinations, with the smallest and largest in parentheses. Comparisons counts those combinations (and, for the cached prefix, prompt shapes and concurrencies). Each row restates figures from the section that measures the factor; the GPU-generation row is two-sided because the direction depends on the model, and the GPU-memory row is one model (Llama-3.3-70B). Repeat-to-repeat variation is shown for scale, with its 90th percentile in place of a range.}\label{tab:factors}
-\begin{tabular}{>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{3.0cm}lr>{\raggedright\arraybackslash}p{1.9cm}>{\raggedright\arraybackslash}p{3.1cm}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{6.0cm}lr>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{4.9cm}}
 \toprule
 Factor & Comparison & \makecell[l]{Effect, median\\(range)} & \makecell[r]{Compar-\\isons} & \makecell[l]{Per\\doubling} & What the data tell us \\
 \midrule
@@ -20,3 +21,4 @@ Repeat-to-repeat variation & the larger over the smaller of two repeats & 1.02 (
 \bottomrule
 \end{tabular}
 \end{table}
+\end{landscape}
