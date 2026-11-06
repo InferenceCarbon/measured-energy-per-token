@@ -1,0 +1,15 @@
+**Metered runs per experiment, model and accelerator (917 runs).**
+
+| Experiment | H100 Qwen3-8B | H100 Qwen3-30B-A3B | H100 DeepSeek-V2-Lite | H100 Llama-3.3-70B | B200 Qwen3-8B | B200 Qwen3-30B-A3B | B200 DeepSeek-V2-Lite | B200 Llama-3.3-70B | Total |
+|---|---|---|---|---|---|---|---|---|---|
+| c0_static | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 16 |
+| c1_decode_batch | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 80 |
+| c2_decode_context | 22 | 16 | 18 | 14 | 22 | 16 | 19 | 14 | 141 |
+| c3_prefill_miss | 22 | 16 | 18 | 16 | 22 | 16 | 18 | 16 | 144 |
+| c4_cached_prefix | 48 | 48 | 48 | 48 | 48 | 48 | 48 | 48 | 384 |
+| c6_tensor_parallel | 12 | 0 | 0 | 12 | 12 | 0 | 0 | 12 | 48 |
+| c7_precision | 0 | 0 | 0 | 0 | 16 | 8 | 8 | 16 | 48 |
+| c8_agent_replay | 6 | 4 | 4 | 4 | 6 | 4 | 4 | 4 | 36 |
+| c9_kv_pressure | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 12 |
+| c9b_kv_pressure_diag | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8 | 8 |
+| Total | 122 | 96 | 100 | 106 | 138 | 104 | 109 | 142 | 917 |

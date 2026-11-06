@@ -1,0 +1,62 @@
+# Serving templates and hardware catalogue — version 1, 2026-10-22.
+
+templates_version: 1
+
+# Accelerators (board-level) and platforms are kept separate, per the
+# third review: GB200 NVL72 is a platform, not a GPU generation label.
+accelerators:
+  h100:
+    display: "NVIDIA H100 80GB HBM3 (SXM)"
+    hbm_gb: 80
+    hbm_bw_gbs: 3350
+    tdp_w: 700
+    fp8: true
+    nvfp4: false
+    runpod_gpu_type_id: "NVIDIA H100 80GB HBM3"
+    runpod_price_per_hr_usd: 3.99   # observed 2026-10-22, Secure Cloud US-MO-1
+  b200:
+    display: "NVIDIA B200 (SXM)"
+    hbm_gb: 180
+    hbm_bw_gbs: 8000
+    tdp_w: 1000
+    fp8: true
+    nvfp4: true
+    runpod_gpu_type_id: "NVIDIA B200"
+    runpod_price_per_hr_usd: 7.99   # observed 2026-10-22, Secure Cloud
+
+platforms:
+  hgx_node:
+    display: "8-GPU HGX node, NVLink within node"
+    max_gpus: 8
+    interconnect: nvlink_intra_node
+  nvl72:
+    display: "GB200 NVL72 rack"
+    max_gpus: 72
+    interconnect: nvlink_switch_rack
+    in_calibrated_domain: false
+
+# Campaign pin
+runpod:
+  data_center: US-MO-1
+  cloud: secure
+  image: "runpod/pytorch:1.4.1-cu1281-torch280-ubuntu2404"
+  container_disk_gb: 100
+  volume_gb: 200          # model weights cache; mounted at /workspace
+
+# Fixed vLLM settings for every calibration cell (Plan v3 §3)
+vllm:
+  version_pin: ">=0.14,<0.16"
+  enable_chunked_prefill: true
+  enable_prefix_caching: true          # off only in cache-miss cells
+  gpu_memory_utilization: 0.90
+  max_num_batched_tokens: 65536
+  speculative_decoding: false          # on only in observation-calibration / blind endpoints
+  distributed_executor_backend: mp
+  pipeline_parallel_size: 1
+  port: 8000
+
+# KV headroom used by the feasibility generator
+feasibility:
+  weight_overhead_factor: 1.15     # activations, CUDA context, buffers
+  kv_fraction_of_free: 0.90        # vLLM reserves the rest
+  min_batch_for_cell: 1

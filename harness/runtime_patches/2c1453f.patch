@@ -1,0 +1,443 @@
+diff --git a/config/cells.yaml b/config/cells.yaml
+index e6f6682..a75b03e 100644
+--- a/config/cells.yaml
++++ b/config/cells.yaml
+@@ -122,44 +122,6 @@ cells:
+       out: 256
+     only_accelerators: [b200]
+ 
+-  - id: c9_kv_pressure
+-    phase: decode
+-    description: >
+-      Added 25 Oct (Astra review). The 70B/B200 cells at 16.7k context and batch 23-26 ran at a quarter of the
+-      throughput of their batch-30 repeat at the same power; KV-cache occupancy near capacity (scheduler
+-      preemption) is the candidate. This sweep holds the context and walks the batch through the occupancy
+-      range so the unsupported-region boundary is measured, not guessed, and a discrepancy allowance for the
+-      region can be calibrated if the paper keeps the region in scope.
+-    vary:
+-      target_batch: [12, 16, 20, 24, 28, 32]
+-      context_cached: [16384]
+-    fixed:
+-      fresh_in: 200
+-      out: 256
+-    only_models: [llama-3.3-70b]
+-    only_accelerators: [b200]
+-
+-  - id: c9b_kv_pressure_diag
+-    phase: decode
+-    description: >
+-      Added 25 Oct evening (Astra's second review, item 11). The c9 sweep ran without a preemption counter: batch
+-      12-28 at 16.7k context on 70B/B200 was clean up to 0.89 KV usage, and the target-31 cell collapsed
+-      (achieved 23, a waiting queue, 6.3 J per token). This rerun carries vllm:num_preemptions_total and the
+-      allocated KV pool from the server's startup line, at the fast points (12, 20, 28) and the slow point
+-      (32), and repeats the same batches at gpu-memory-utilization 0.7 so the boundary can be seen to move
+-      with the pool. Targets are NOT resized to the template B_max: where the real pool ends is the measurement.
+-    no_resize: true
+-    repeats: 1
+-    vary:
+-      target_batch: [12, 20, 28, 32]
+-      context_cached: [16384]
+-      gpu_memory_utilization: [0.9, 0.7]
+-    fixed:
+-      fresh_in: 200
+-      out: 256
+-    only_models: [llama-3.3-70b]
+-    only_accelerators: [b200]
+-
+   - id: c8_agent_replay
+     phase: composite
+     description: 30-step synthetic agent; energy predicted before the run
+diff --git a/meter/campaign.py b/meter/campaign.py
+index 6b9fe87..12edf81 100644
+--- a/meter/campaign.py
++++ b/meter/campaign.py
+@@ -24,7 +24,6 @@ import json
+ import logging
+ import os
+ import random
+-import re
+ import subprocess
+ import sys
+ import time
+@@ -77,13 +76,11 @@ def _cells_spec(cells_path: Path = CONFIG_DIR / "cells.yaml") -> dict[str, Any]:
+ def server_config_for(run: dict[str, Any], cat: Catalogue) -> ServerConfig:
+     fixed = run.get("fixed", {})
+     prefix_caching = bool(fixed.get("prefix_caching", True))
+-    gmu = run.get("variant", {}).get("gpu_memory_utilization", fixed.get("gpu_memory_utilization"))
+     return ServerConfig(model_key=run["model"], tp=int(run["tp"]),
+                         weight_precision=run["weight_precision"], kv_precision=run["kv_precision"],
+                         prefix_caching=prefix_caching, max_num_seqs=256,
+                         max_model_len=cat.model(run["model"]).native_context,
+-                        router_hook=bool(run.get("router_pass", False)),
+-                        gpu_memory_utilization=float(gmu) if gmu is not None else None)
++                        router_hook=bool(run.get("router_pass", False)))
+ 
+ 
+ def router_pass_plan(runs: list[dict[str, Any]], cat: Catalogue) -> list[dict[str, Any]]:
+@@ -136,7 +133,7 @@ def repeats_separated(plans: list[list[dict[str, Any]]]) -> bool:
+ 
+ def plan(cat: Catalogue, accelerator: str, n_gpus: int, mode: str,
+          models: list[str] | None = None, include_separate_pass: bool = False,
+-         seed: int = 20261022, min_gpus: int = 1, cells: list[str] | None = None) -> list[dict[str, Any]]:
++         seed: int = 20261022, min_gpus: int = 1) -> list[dict[str, Any]]:
+     """Ordered list of manifest rows (with the cell's `fixed` block and a
+     `server_key` merged in) for this pod."""
+     spec = _cells_spec()
+@@ -145,8 +142,6 @@ def plan(cat: Catalogue, accelerator: str, n_gpus: int, mode: str,
+     runs = [r for r in man["runs"] if min_gpus <= r["n_gpus"] <= n_gpus]
+     if models:
+         runs = [r for r in runs if r["model"] in models]
+-    if cells:
+-        runs = [r for r in runs if r["cell"] in cells]
+     if not include_separate_pass:
+         runs = [r for r in runs if not by_id[r["cell"]].get("separate_pass")]
+     for r in runs:
+@@ -244,15 +239,6 @@ XCHECK_BATCH = 16          # on ML.ENERGY's max_num_seqs grid
+ XCHECK_OUT_TOKENS = 600    # near their Text Conversation mean output (~630 tokens)
+ 
+ 
+-_BMAX_FLAG = re.compile(r"^achieved batch [\d.]+ vs target \d+$")
+-
+-
+-def _is_bmax_observation(info: dict[str, Any]) -> bool:
+-    """A finished, not-ok cell whose only flags say the target batch was not reachable."""
+-    flags = info.get("flags") or []
+-    return bool(flags) and all(_BMAX_FLAG.match(str(f)) for f in flags) and info.get("energy_j_active") is not None
+-
+-
+ # ---------------------------------------------------------------------------
+ # Results, checkpoint, push
+ # ---------------------------------------------------------------------------
+@@ -483,7 +469,7 @@ def run(args: argparse.Namespace) -> int:
+     log.info("accelerator=%s n_gpus=%d mode=%s commit=%s gpus=%s", acc, n_gpus, args.mode, commit, names)
+ 
+     ordered = plan(cat, acc, n_gpus, args.mode, args.models, args.include_separate_pass,
+-                   min_gpus=args.min_gpus, cells=args.cells)
++                   min_gpus=args.min_gpus)
+     if args.only_router:
+         ordered = [r for r in ordered if r.get("router_pass")]
+     shard_i, shard_n = _parse_shard(args.shard)
+@@ -526,29 +512,15 @@ def run(args: argparse.Namespace) -> int:
+     current: VLLMServer | None = None
+     tok = None
+     tok_for: str | None = None
+-    failed_server_keys: dict[str, list[str]] = {}      # server config key -> flags; do not retry the same start per cell
+     try:
+         for r in ordered:
+-            prev = results.done.get(r["run_id"])
+-            if prev and prev.get("ok", False):
++            if r["run_id"] in results.done and results.done[r["run_id"]].get("ok", False):
+                 log.info("skip (done) %s", r["run_id"])
+                 continue
+-            if prev and _is_bmax_observation(prev):
+-                # the server could not reach the target batch: that is a measurement of B_max, not a
+-                # fault, and a rerun gives the same answer (restarts were repeating these at ~4 min each)
+-                log.info("skip (B_max observation) %s", r["run_id"])
+-                continue
+             if time.time() > deadline:
+                 log.error("hard timeout reached; stopping before %s", r["run_id"])
+                 break
+             cfg = server_config_for(r, cat)
+-            if cfg.key() in failed_server_keys:
+-                info = {"run_id": r["run_id"], "ok": False, "flags": failed_server_keys[cfg.key()], "wall_s": 0.0}
+-                cell_results.append(info)
+-                results.mark(r["run_id"], info)
+-                results.push(f"{args.mode} server-failed {r['run_id']}")
+-                log.error("skipping %s: server config already failed to start on this pod", r["run_id"])
+-                continue
+             if current is None or current.cfg.key() != cfg.key():
+                 if current:
+                     current.stop()
+@@ -561,7 +533,6 @@ def run(args: argparse.Namespace) -> int:
+                     current, more = _start_server(clean, cat, args.results)
+                     start_flags += ["router hook server failed; cell ran WITHOUT the hook"] + more
+                 if current is None:
+-                    failed_server_keys[cfg.key()] = start_flags
+                     info = {"run_id": r["run_id"], "ok": False, "flags": start_flags, "wall_s": 0.0}
+                     cell_results.append(info)
+                     results.mark(r["run_id"], info)
+@@ -720,7 +691,6 @@ def main(argv: list[str] | None = None) -> int:
+     ap.add_argument("--accelerator", default="auto")
+     ap.add_argument("--n-gpus", default="auto")
+     ap.add_argument("--models", nargs="*", default=None)
+-    ap.add_argument("--cells", nargs="*", default=None, help="run only these cell ids (mop-up / diagnostic pods)")
+     ap.add_argument("--include-separate-pass", action="store_true")
+     ap.add_argument("--dry-run", action="store_true", help="plan only; no GPU needed")
+     ap.add_argument("--hard-timeout-h", type=float, default=20.0)
+diff --git a/meter/cell.py b/meter/cell.py
+index 8c9c39b..9fbbaa4 100644
+--- a/meter/cell.py
++++ b/meter/cell.py
+@@ -127,7 +127,7 @@ class MetricsSampler:
+                 self.samples.append(await asyncio.to_thread(self.server.metrics))
+             except Exception as e:  # metrics endpoint hiccup: record, continue
+                 self.samples.append(SchedulerSnapshot(time.perf_counter(), float("nan"),
+-                                                      float("nan"), None, None, None, None, None, None))
++                                                      float("nan"), None, None, None, None, None))
+             try:
+                 await asyncio.wait_for(self._stop.wait(), self.period_s)
+             except asyncio.TimeoutError:
+@@ -142,50 +142,24 @@ class MetricsSampler:
+         if self._task:
+             await self._task
+ 
+-    def dump(self, path: Path) -> None:
+-        """Persist the raw scheduler samples (JSON lines) so batch statistics
+-        can be recomputed under a different definition later (25 Oct: the
+-        obscal d1-d8 batch figures could not be, because only the summary
+-        was kept)."""
+-        path.parent.mkdir(parents=True, exist_ok=True)
+-        with path.open("w") as fh:
+-            for s in self.samples:
+-                fh.write(json.dumps(asdict(s)) + "\n")
+-
+     def achieved_batch(self, t_start: float, t_end: float, trim: float = 0.10) -> dict[str, Any]:
+-        """Batch statistics over the steady part of the window (first and
+-        last `trim` of the time excluded). BATCH SEMANTICS (Astra, 25 Oct):
+-          running_mean   wall-time mean of num_requests_running, idle samples
+-                         included (what a window-average sees);
+-          active_batch   mean of num_requests_running over samples with
+-                         running > 0 -- the batch the forward model's q_W
+-                         sees while work is being done;
+-          idle_fraction  fraction of samples with running == 0; idle energy
+-                         enters through the duration model, never through the
+-                         batch.
+-        Also the deltas of the server's cumulative counters over the window,
+-        including scheduler preemptions where the server exposes them."""
++        """Mean/median num_requests_running over the steady part of the
++        window (first and last `trim` of the time excluded)."""
+         span = t_end - t_start
+         lo, hi = t_start + trim * span, t_end - trim * span
+         inside = [s for s in self.samples if lo <= s.t <= hi and s.running == s.running]
+         running = [s.running for s in inside]
+-        active = [r for r in running if r > 0]
+         waiting = [s.waiting for s in inside if s.waiting == s.waiting]
+         allsamp = [s for s in self.samples if s.t >= t_start and s.t <= t_end]
+         first = next((s for s in allsamp if s.prompt_tokens is not None), None)
+         last = next((s for s in reversed(allsamp) if s.prompt_tokens is not None), None)
+-        pre = [s.preemptions for s in allsamp if s.preemptions is not None]
+         return {
+             "n_samples": len(inside),
+             "running_mean": statistics.fmean(running) if running else None,
+             "running_median": statistics.median(running) if running else None,
+             "running_min": min(running) if running else None,
+             "running_max": max(running) if running else None,
+-            "active_batch": statistics.fmean(active) if active else None,
+-            "idle_fraction": (1.0 - len(active) / len(running)) if running else None,
+             "waiting_mean": statistics.fmean(waiting) if waiting else None,
+-            "preemptions_delta": (pre[-1] - pre[0]) if len(pre) >= 2 else None,
+-            "preemptions_counter_present": bool(pre),
+             "kv_usage_mean": statistics.fmean([s.kv_usage for s in inside if s.kv_usage is not None])
+             if any(s.kv_usage is not None for s in inside) else None,
+             "server_prompt_tokens_delta": (last.prompt_tokens - first.prompt_tokens)
+@@ -350,7 +324,6 @@ def run_cell(run: dict[str, Any], cat: Catalogue, server: VLLMServer | None,
+                         extra = {}
+                     await sampler.stop()
+                     wes = meter.stop("active")
+-                    sampler.dump(out_dir / "sched_samples.jsonl")
+                     achieved = sampler.achieved_batch(stats.t_start, stats.t_end)
+                     phase_tokens = stats.phase_tokens
+                     active_summary = add_window("active", wes, {
+diff --git a/meter/feasibility.py b/meter/feasibility.py
+index e0097e2..ac9e035 100644
+--- a/meter/feasibility.py
++++ b/meter/feasibility.py
+@@ -153,8 +153,7 @@ def build_manifest(cat: Catalogue, cells_path: Path = CONFIG_DIR / "cells.yaml",
+                                                 "reason": f"context {ctx} > native {m.native_context}"})
+                                 continue
+                             f = work.feasibility(m, cat, acc, tp, precision, kv_precision,
+-                                                 int(ctx) if isinstance(ctx, int) else 1024,
+-                                                 gpu_memory_utilization=variant.get("gpu_memory_utilization"))
++                                                 int(ctx) if isinstance(ctx, int) else 1024)
+                             if not f.fits:
+                                 dropped.append({"model": m.key, "acc": acc, "cell": cell["id"],
+                                                 "variant": variant, "reason": f.reason})
+@@ -162,13 +161,8 @@ def build_manifest(cat: Catalogue, cells_path: Path = CONFIG_DIR / "cells.yaml",
+                             note = ""
+                             tb = variant.get("target_batch")
+                             if isinstance(tb, int) and tb > f.b_max:
+-                                if cell.get("no_resize"):
+-                                    # a diagnostic cell that deliberately targets beyond the template B_max
+-                                    # (c9b: the real pool is larger; where it ends is the measurement)
+-                                    note = f"target_batch {tb} above template B_max {f.b_max}; kept (no_resize)"
+-                                else:
+-                                    note = f"target_batch {tb} resized to B_max {f.b_max}"
+-                                    variant["target_batch"] = f.b_max
++                                note = f"target_batch {tb} resized to B_max {f.b_max}"
++                                variant["target_batch"] = f.b_max
+                             vid = "_".join(f"{k}-{v}" for k, v in sorted(variant.items()))
+                             base_id = f"{acc}/{m.key}/tp{tp}/{cell['id']}/{vid}"
+                             if base_id in seen_bases:
+diff --git a/meter/moe_hook.py b/meter/moe_hook.py
+index a6f8977..fe28c24 100644
+--- a/meter/moe_hook.py
++++ b/meter/moe_hook.py
+@@ -70,22 +70,12 @@ def step_boundary(now: float, last_t: float | None, gap_s: float = 0.0005) -> bo
+ def summarise(records: list[dict[str, Any]]) -> dict[str, Any]:
+     """Aggregate hook records: per-step totals and the union-vs-tokens curve
+     the fit needs (mean unique experts per layer at each batch size)."""
+-    # layers whose distinct-expert count never exceeds 1 are dense layers that the capture buffer carries
+-    # as a constant row (DeepSeek-V2-Lite's first layer): they are not MoE layers and must not enter the
+-    # per-layer mean (6 x 26/27 = 5.8 was the symptom; Astra, 25 Oct)
+-    max_unique: dict[int, int] = {}
+-    for r in records:
+-        if not r.get("diag") and "layer" in r:
+-            max_unique[r["layer"]] = max(max_unique.get(r["layer"], 0), int(r.get("unique", 0)))
+-    dense_layers = {l for l, u in max_unique.items() if u <= 1}
+-    moe_layers = sorted(l for l in max_unique if l not in dense_layers)
+-    first_moe = moe_layers[0] if moe_layers else 0
+     steps: list[dict[str, Any]] = []
+     cur: list[dict[str, Any]] = []
+     for r in records:
+-        if r.get("diag") or r.get("layer") in dense_layers:
++        if r.get("diag"):
+             continue
+-        if r.get("layer", 0) == first_moe and cur:
++        if r.get("layer", 0) == 0 and cur:
+             steps.append(_fold(cur))
+             cur = []
+         cur.append(r)
+@@ -96,7 +86,6 @@ def summarise(records: list[dict[str, Any]]) -> dict[str, Any]:
+         by_tokens.setdefault(s["tokens"], []).append(s["mean_unique_per_layer"])
+     curve = {t: sum(v) / len(v) for t, v in sorted(by_tokens.items())}
+     return {"n_steps": len(steps), "n_layers": max((s["n_layers"] for s in steps), default=0),
+-            "dense_layers_excluded": sorted(dense_layers),
+             "union_curve_mean_unique_per_layer_by_tokens": curve, "steps": steps}
+ 
+ 
+diff --git a/meter/server.py b/meter/server.py
+index 5127c1b..504f05e 100644
+--- a/meter/server.py
++++ b/meter/server.py
+@@ -45,17 +45,13 @@ class ServerConfig:
+     port: int | None = None                   # None -> serving.yaml
+     seed: int = 20261022
+     router_hook: bool = False                 # MoE expert-union logging pass only (meter.moe_hook)
+-    # KV-pool size lever (c9 diagnostics, 25 Oct): None -> serving.yaml (0.9; 0.7 for NVFP4). The allocated
+-    # pool is what the scheduler preempts against, so a cell that varies it moves the unsupported-region boundary.
+-    gpu_memory_utilization: float | None = None
+ 
+     def key(self) -> str:
+         """Stable identity: cells sharing a key share one server process."""
+         spec = json.dumps(self.speculative_config, sort_keys=True) if self.speculative_config else "none"
+         return (f"{self.model_key}|tp{self.tp}|{self.weight_precision}|kv-{self.kv_precision}"
+                 f"|pc-{int(self.prefix_caching)}|seqs{self.max_num_seqs}"
+-                f"|len{self.max_model_len or 'native'}|spec-{spec}" + ("|hook" if self.router_hook else "")
+-                + (f"|gmu{self.gpu_memory_utilization}" if self.gpu_memory_utilization is not None else ""))
++                f"|len{self.max_model_len or 'native'}|spec-{spec}" + ("|hook" if self.router_hook else ""))
+ 
+     def env(self, cat: Catalogue, hook_dir: str | None = None) -> dict[str, str]:
+         """Extra process environment for this server."""
+@@ -107,11 +103,7 @@ def build_command(cfg: ServerConfig, cat: Catalogue) -> list[str]:
+         "--tensor-parallel-size", str(cfg.tp),
+         "--pipeline-parallel-size", str(v.get("pipeline_parallel_size", 1)),
+         "--distributed-executor-backend", v.get("distributed_executor_backend", "mp"),
+-        # NVFP4 kernels allocate a workspace AFTER vLLM has sized the KV cache to the utilisation
+-        # target (both NVFP4 checkpoints OOMed at init with 0.9 on B200, 25 Oct; 70B still OOMed at 0.8 on a 14 GB workspace); leave headroom
+-        "--gpu-memory-utilization", str(cfg.gpu_memory_utilization if cfg.gpu_memory_utilization is not None
+-                                        else v.get("gpu_memory_utilization_nvfp4", 0.7) if cfg.weight_precision == "nvfp4"
+-                                        else v["gpu_memory_utilization"]),
++        "--gpu-memory-utilization", str(v["gpu_memory_utilization"]),
+         "--max-model-len", str(max_len),
+         "--max-num-seqs", str(cfg.max_num_seqs),
+         "--max-num-batched-tokens", str(v["max_num_batched_tokens"]),
+@@ -188,9 +180,6 @@ METRIC_PREFIX_HITS = ["vllm:prefix_cache_hits_total", "vllm:prefix_cache_hits",
+                       "vllm:gpu_prefix_cache_hits_total", "vllm:gpu_prefix_cache_hits"]
+ METRIC_PROMPT_TOKENS = ["vllm:prompt_tokens_total", "vllm:prompt_tokens"]
+ METRIC_GEN_TOKENS = ["vllm:generation_tokens_total", "vllm:generation_tokens"]
+-# scheduler preemptions (KV pressure: a running request evicted and requeued). Counter in vLLM >= 0.6;
+-# both spellings tried. Absent -> None, recorded as such (the 25 Oct c9 sweep had no counter).
+-METRIC_PREEMPTIONS = ["vllm:num_preemptions_total", "vllm:num_preemptions"]
+ 
+ 
+ @dataclass
+@@ -203,7 +192,6 @@ class SchedulerSnapshot:
+     prefix_hits: float | None
+     prompt_tokens: float | None
+     generation_tokens: float | None
+-    preemptions: float | None = None
+ 
+ 
+ def snapshot_from_metrics(metrics: dict, t: float | None = None) -> SchedulerSnapshot:
+@@ -216,35 +204,9 @@ def snapshot_from_metrics(metrics: dict, t: float | None = None) -> SchedulerSna
+         prefix_hits=metric_value(metrics, METRIC_PREFIX_HITS),
+         prompt_tokens=metric_value(metrics, METRIC_PROMPT_TOKENS),
+         generation_tokens=metric_value(metrics, METRIC_GEN_TOKENS),
+-        preemptions=metric_value(metrics, METRIC_PREEMPTIONS),
+     )
+ 
+ 
+-_KV_POOL = re.compile(r"GPU KV cache size:\s*([\d,]+)\s*tokens")
+-_KV_CONC = re.compile(r"Maximum concurrency for ([\d,]+) tokens per request:\s*([\d.]+)x")
+-
+-
+-def kv_pool_from_log(text: str) -> dict[str, Any]:
+-    """The KV pool vLLM ALLOCATED, from its startup lines ("GPU KV cache size:
+-    N tokens"; "Maximum concurrency for L tokens per request: Cx"). This is
+-    the denominator of KV occupancy (c9 diagnostics): the pool the scheduler
+-    preempts against, not HBM minus weights. Last occurrence wins (a log that
+-    has seen several starts reports the current server)."""
+-    out: dict[str, Any] = {}
+-    m = None
+-    for m in _KV_POOL.finditer(text):
+-        pass
+-    if m:
+-        out["kv_cache_tokens"] = int(m.group(1).replace(",", ""))
+-    m = None
+-    for m in _KV_CONC.finditer(text):
+-        pass
+-    if m:
+-        out["max_concurrency_at_tokens"] = int(m.group(1).replace(",", ""))
+-        out["max_concurrency"] = float(m.group(2))
+-    return out
+-
+-
+ # ---------------------------------------------------------------------------
+ # Process control
+ # ---------------------------------------------------------------------------
+@@ -348,18 +310,9 @@ class VLLMServer:
+             "ready_at": self.ready_at,
+             "load_seconds": (self.ready_at - self.started_at)
+             if self.started_at and self.ready_at else None,
+-            "gpu_memory_utilization": next((self.cmd[j + 1] for j, a in enumerate(self.cmd) if a == "--gpu-memory-utilization"), None) if hasattr(self, "cmd") else None,
+             "log": str(self.log_path),
+-            **self.kv_pool(),
+         }
+ 
+-    def kv_pool(self) -> dict[str, Any]:
+-        """Allocated KV pool from this server's log (see kv_pool_from_log)."""
+-        try:
+-            return kv_pool_from_log(self.log_path.read_text(errors="replace"))
+-        except OSError:
+-            return {}
+-
+ 
+ def _slug(s: str) -> str:
+     return re.sub(r"[^A-Za-z0-9._-]+", "_", s)[:120]
+diff --git a/meter/work.py b/meter/work.py
+index b174be6..6f64a3e 100644
+--- a/meter/work.py
++++ b/meter/work.py
+@@ -129,19 +129,14 @@ class Feasibility:
+ 
+ def feasibility(m: ModelTemplate, cat: Catalogue, accelerator: str,
+                 n_gpus: int, weight_precision: str, kv_precision: str,
+-                context: int, gpu_memory_utilization: float | None = None) -> Feasibility:
++                context: int) -> Feasibility:
+     """Does the model fit on n_gpus of `accelerator`, and how many requests
+-    at `context` can be resident at once? `gpu_memory_utilization` overrides
+-    the serving default (a cell that varies vLLM's memory target moves the
+-    KV pool, hence B_max). This is the TEMPLATE pool estimate; the pool vLLM
+-    actually allocates is read from its startup line (server.kv_pool_from_log)
+-    and was 12-56% larger on the observed pods."""
++    at `context` can be resident at once?"""
+     acc = cat.accelerators[accelerator]
+     if weight_precision == "nvfp4" and not acc["nvfp4"]:
+         return Feasibility(False, n_gpus, 0, 0, 0, 0, "nvfp4 unsupported on this accelerator")
+     fz = cat.serving["feasibility"]
+-    gmu = gpu_memory_utilization if gpu_memory_utilization is not None else cat.serving["vllm"]["gpu_memory_utilization"]
+-    hbm_total = acc["hbm_gb"] * GB * n_gpus * gmu
++    hbm_total = acc["hbm_gb"] * GB * n_gpus * cat.serving["vllm"]["gpu_memory_utilization"]
+     w = weight_bytes_total(m, cat, weight_precision) * fz["weight_overhead_factor"]
+     if w > hbm_total:
+         return Feasibility(False, n_gpus, w / GB, 0, 0, 0,

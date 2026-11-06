@@ -1,0 +1,14 @@
+Pod,Data center,Accelerator,GPUs,Models (count),Runs,Metered hours
+pod 1,US-CA-2,B200,1,4,220,4.63
+pod 2,US-NC-2,B200,1,4,218,5.66
+pod 3,US-TX-6,B200,1,1,12,0.28
+pod 4,EU-RO-1,B200,2,2,12,0.33
+pod 5,US-NC-2,B200,1,1,8,0.14
+pod 6,US-NC-2,B200,1,1,8,0.26
+pod 7,US-NC-2,B200,1,1,8,0.17
+pod 8,US-NE-1,B200,4,1,6,0.18
+pod 9,US-NC-2,B200,1,1,1,0.02
+pod 10,US-MO-1,H100,2,4,201,5.31
+pod 11,AP-IN-1,H100,2,4,198,6.93
+pod 12,US-MO-1,H100,2,4,19,0.44
+pod 13,CA-MTL-1,H100,4,1,6,0.19

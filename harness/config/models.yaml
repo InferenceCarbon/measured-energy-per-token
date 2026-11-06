@@ -1,0 +1,150 @@
+# Architecture templates — version 1, 2026-10-22.
+#
+# Every field a forward calculation needs is here, so that K(L), W, W_batch
+# and memory feasibility can be computed with no further assumption.
+# Values come from each model's published config.json; the source line
+# records where. Served precision and KV-cache precision are separate.
+#
+# roles: calibration | withheld (fifth model: never in fitting or
+#        tolerance-calibration data; blind test and transfer only)
+
+templates_version: 1
+
+models:
+
+  qwen3-8b:
+    hf_id: Qwen/Qwen3-8B-FP8
+    hf_id_bf16: Qwen/Qwen3-8B
+    # NVFP4 (ep7 alternative, B200 only): Red Hat AI llm-compressor checkpoint
+    # (compressed-tensors; vLLM detects the scheme from config). Not yet run here.
+    hf_id_nvfp4: RedHatAI/Qwen3-8B-NVFP4
+    role: calibration
+    family: qwen3
+    architecture: dense
+    attention: gqa
+    n_layers: 36
+    hidden_size: 4096
+    n_heads: 32
+    n_kv_heads: 8
+    head_dim: 128
+    n_params_total_b: 8.2
+    n_params_active_b: 8.2
+    native_context: 32768
+    weight_precisions: [fp8, bf16, nvfp4]
+    kv_precisions: [fp8, bf16]
+    gated: false
+    source: https://huggingface.co/Qwen/Qwen3-8B/blob/main/config.json
+
+  qwen3-30b-a3b:
+    hf_id: Qwen/Qwen3-30B-A3B-FP8
+    hf_id_bf16: Qwen/Qwen3-30B-A3B
+    role: calibration
+    family: qwen3
+    architecture: moe
+    attention: gqa
+    n_layers: 48
+    hidden_size: 2048
+    n_heads: 32
+    n_kv_heads: 4
+    head_dim: 128
+    n_params_total_b: 30.5
+    n_params_active_b: 3.3
+    moe:
+      n_experts: 128
+      top_k: 8
+      shared_experts: 0
+      routed_layers: 48
+      expert_intermediate: 768
+    native_context: 32768
+    weight_precisions: [fp8, bf16]
+    kv_precisions: [fp8, bf16]
+    gated: false
+    source: https://huggingface.co/Qwen/Qwen3-30B-A3B/blob/main/config.json
+
+  deepseek-v2-lite:
+    hf_id: deepseek-ai/DeepSeek-V2-Lite-Chat
+    role: calibration
+    family: deepseek
+    architecture: moe
+    attention: mla
+    n_layers: 27
+    hidden_size: 2048
+    n_heads: 16
+    # MLA: the cache holds a compressed latent per token plus a decoupled
+    # rotary key; K(L) uses these, NOT the GQA head formula.
+    mla:
+      kv_lora_rank: 512
+      qk_rope_head_dim: 64
+    n_params_total_b: 15.7
+    n_params_active_b: 2.4
+    moe:
+      n_experts: 64
+      top_k: 6
+      shared_experts: 2
+      routed_layers: 26       # first layer is dense
+      expert_intermediate: 1408
+    native_context: 32768
+    weight_precisions: [bf16, fp8]
+    kv_precisions: [bf16, fp8]
+    gated: false
+    source: https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite/blob/main/config.json
+
+  llama-3.3-70b:
+    hf_id: meta-llama/Llama-3.3-70B-Instruct
+    hf_id_fp8: RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic
+    # NVFP4 (ep7, B200 only): NVIDIA's ModelOpt checkpoint, named by the vLLM recipe
+    # for Llama 3.3 70B (docs.vllm.ai/projects/recipes, Blackwell path). Gated like
+    # the base model (HF_TOKEN with the Llama licence accepted). Not yet run here.
+    hf_id_nvfp4: nvidia/Llama-3.3-70B-Instruct-FP4
+    role: calibration
+    family: llama3
+    architecture: dense
+    attention: gqa
+    n_layers: 80
+    hidden_size: 8192
+    n_heads: 64
+    n_kv_heads: 8
+    head_dim: 128
+    n_params_total_b: 70.6
+    n_params_active_b: 70.6
+    native_context: 131072
+    weight_precisions: [fp8, bf16, nvfp4]
+    kv_precisions: [fp8, bf16]
+    gated: true
+    min_gpus: {h100: 2, b200: 1}
+    source: https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/blob/main/config.json
+
+  gemma-3-27b:
+    hf_id: google/gemma-3-27b-it
+    role: withheld
+    family: gemma3
+    architecture: dense
+    attention: gqa_hybrid_local_global
+    n_layers: 62
+    hidden_size: 5376
+    n_heads: 32
+    n_kv_heads: 16
+    head_dim: 128
+    # Gemma 3 alternates local (sliding window 1024) and global attention;
+    # 5 local : 1 global. KV for local layers is bounded by the window.
+    sliding_window: 1024
+    local_global_pattern: [local, local, local, local, local, global]
+    n_params_total_b: 27.4
+    n_params_active_b: 27.4
+    native_context: 131072
+    weight_precisions: [bf16, fp8]
+    kv_precisions: [bf16, fp8]
+    gated: true
+    source: https://huggingface.co/google/gemma-3-27b-it/blob/main/config.json
+    note: >
+      Chosen as the withheld model deliberately for its hybrid attention;
+      a miss on this model is read as an architecture-coverage finding.
+
+bytes_per_param:
+  fp8: 1
+  nvfp4: 0.5
+  bf16: 2
+
+bytes_per_kv_element:
+  fp8: 1
+  bf16: 2

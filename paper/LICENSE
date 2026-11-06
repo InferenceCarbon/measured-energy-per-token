@@ -1,0 +1,27 @@
+Copyright 2026 InferenceCarbon Ltd
+
+The text of the paper in this directory (paper.tex and the PDF built from it),
+including its figures, is licensed in its preprint versions under the Creative
+Commons Attribution-NonCommercial-NoDerivatives 4.0 International License
+(CC BY-NC-ND 4.0):
+https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
+
+It may be shared verbatim with attribution; derivative versions may not
+circulate. Each deposited version is immutable and separately citable. Where a
+version is subsequently accepted by a journal, the accepted version carries
+that journal's license in place of this one.
+
+The no-derivatives term does not restrict use of what the paper reports:
+repeating the measurements, re-running the analysis, computing with the
+figures and publishing the results require no permission, and quotation for
+criticism, review and scholarship is unaffected. Circulating the paper within
+an organization, including in support of its own carbon reporting, is
+expressly permitted. Requests to reproduce or adapt the text for
+standards-setting or regulatory guidance are welcome: methodology@inferencecarbon.ai.
+
+The generated tables in tables/ are data and carry the data license
+(../data/LICENSE). The full terms are in Appendix F of the paper.
+
+Trademarks: no trademark rights are granted. "InferenceCarbon", the
+InferenceCarbon name and logo, and the InferenceCarbon.ai domain are marks of
+InferenceCarbon Ltd, and are reserved.

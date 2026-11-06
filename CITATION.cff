@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Please cite the paper. The arXiv identifier will be added once assigned."
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.24014980
+    description: "Zenodo deposit: corpus, raw records, harness and analysis code"
+title: "Measured Energy per Token for Four Open Language Models on NVIDIA H100 and B200: Batch, Context, Precision, Tensor Parallelism and Prefix Caching"
+type: article
+authors:
+  - family-names: Manktelow
+    given-names: James
+    orcid: "https://orcid.org/0009-0003-6822-8300"
+    affiliation: "InferenceCarbon Ltd"
+repository-code: "https://github.com/InferenceCarbon/measured-energy-per-token"
+keywords:
+  - energy measurement
+  - LLM inference
+  - GPU
+  - vLLM
+  - NVML

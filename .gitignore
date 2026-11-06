@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.DS_Store
+# build outputs (tables/ and figs/ are committed; they are inputs to the LaTeX build)
+paper/paper.pdf
+paper/paper.md
+paper/paper.html
+paper/paper_reading.pdf
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+*.docx
+dist/
+deposit/

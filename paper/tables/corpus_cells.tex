@@ -1,0 +1,27 @@
+\newgeometry{margin=0.6in}
+\begin{landscape}
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Metered runs per experiment, model and accelerator (917 runs).}\label{tab:corpus}
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+Experiment & \makecell[r]{H100\\Qwen3-8B} & \makecell[r]{H100\\Qwen3-30B-A3B} & \makecell[r]{H100\\DeepSeek-V2-Lite} & \makecell[r]{H100\\Llama-3.3-70B} & \makecell[r]{B200\\Qwen3-8B} & \makecell[r]{B200\\Qwen3-30B-A3B} & \makecell[r]{B200\\DeepSeek-V2-Lite} & \makecell[r]{B200\\Llama-3.3-70B} & Total \\
+\midrule
+c0\_static & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 16 \\
+c1\_decode\_batch & 10 & 10 & 10 & 10 & 10 & 10 & 10 & 10 & 80 \\
+c2\_decode\_context & 22 & 16 & 18 & 14 & 22 & 16 & 19 & 14 & 141 \\
+c3\_prefill\_miss & 22 & 16 & 18 & 16 & 22 & 16 & 18 & 16 & 144 \\
+c4\_cached\_prefix & 48 & 48 & 48 & 48 & 48 & 48 & 48 & 48 & 384 \\
+c6\_tensor\_parallel & 12 & 0 & 0 & 12 & 12 & 0 & 0 & 12 & 48 \\
+c7\_precision & 0 & 0 & 0 & 0 & 16 & 8 & 8 & 16 & 48 \\
+c8\_agent\_replay & 6 & 4 & 4 & 4 & 6 & 4 & 4 & 4 & 36 \\
+c9\_kv\_pressure & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 12 & 12 \\
+c9b\_kv\_pressure\_diag & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 8 & 8 \\
+Total & 122 & 96 & 100 & 106 & 138 & 104 & 109 & 142 & 917 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{landscape}
+\restoregeometry

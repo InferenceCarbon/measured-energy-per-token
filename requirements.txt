@@ -1,0 +1,9 @@
+# analysis/build.py and analysis/counter_check.py (versions used for the paper)
+pandas==3.1.0
+numpy==2.5.4
+pyarrow==26.0.0
+matplotlib==3.11.2
+# tools/ (review exports only; not needed to rebuild the paper)
+markdown
+python-docx
+lxml
