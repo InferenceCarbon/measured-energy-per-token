@@ -61,7 +61,6 @@ b200/llama-3.3-70b/tp1/c1_decode_batch/target_batch-64_weight_precision-fp8,c1_d
 b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-1024_target_batch-64_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,64,2,2,0.07168541863304818,0.07168541863304818,1.0743503361181157,False
 b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-1024_target_batch-8_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,4 to 8,2,2,0.10965162595896401,0.10965162595896401,1.1160120827089237,False
 b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-125117_target_batch-4_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,4 to 8,2,2,0.13653718612137988,0.13653718612137988,1.1465413584907451,False
-b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-16384_target_batch-31_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,64,2,2,1.2011728851906738,1.2011728851906738,4.007341295562768,False
 b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-16384_target_batch-8_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,4 to 8,2,2,0.1076952232751271,0.1076952232751271,1.1138243950972018,False
 b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-4096_target_batch-64_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,64,2,2,0.027412286443989797,0.027412286443989797,1.0277932243576366,False
 b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-4096_target_batch-8_weight_precision-fp8,c2_decode_context,b200,llama-3.3-70b,4 to 8,2,2,0.1196066735336111,0.1196066735336111,1.1272145267164657,False
@@ -101,8 +100,6 @@ b200/llama-3.3-70b/tp1/c7_precision/context_cached-1024_target_batch-64_weight_p
 b200/llama-3.3-70b/tp1/c7_precision/context_cached-1024_target_batch-64_weight_precision-nvfp4,c7_precision,b200,llama-3.3-70b,64,2,1,0.014738175992660042,,1.0148475891838895,True
 b200/llama-3.3-70b/tp1/c7_precision/context_cached-1024_target_batch-8_weight_precision-fp8,c7_precision,b200,llama-3.3-70b,4 to 8,2,2,0.057680549942720157,0.057680549942720157,1.0593934740662965,False
 b200/llama-3.3-70b/tp1/c7_precision/context_cached-1024_target_batch-8_weight_precision-nvfp4,c7_precision,b200,llama-3.3-70b,4 to 8,2,1,0.0041181248785908285,,1.0041266218506446,True
-b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-31_weight_precision-fp8,c7_precision,b200,llama-3.3-70b,64,2,2,1.2806147465507913,1.2806147465507913,4.560303023757236,False
-b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-44_weight_precision-nvfp4,c7_precision,b200,llama-3.3-70b,64,2,1,0.016551060252885712,,1.0166891719985451,True
 b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-8_weight_precision-fp8,c7_precision,b200,llama-3.3-70b,4 to 8,2,2,0.10642859710865883,0.10642859710865883,1.1124104398135188,False
 b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-8_weight_precision-nvfp4,c7_precision,b200,llama-3.3-70b,4 to 8,2,1,0.00906568345503979,,1.0091069638809302,True
 b200/llama-3.3-70b/tp1/c8_agent_replay/context_cap-71680_target_batch-1_weight_precision-fp8,c8_agent_replay,b200,llama-3.3-70b,1,2,2,0.0996212462838429,0.0996212462838429,1.1048435698294725,False
@@ -288,13 +285,10 @@ h100/deepseek-v2-lite/tp1/c8_agent_replay/context_cap-31744_target_batch-8_weigh
 h100/llama-3.3-70b/tp2/c0_static/clock_mode-default_weight_precision-fp8,c0_static,h100,llama-3.3-70b,n/a,2,2,0.07958313328181912,0.07958313328181912,1.0828811021825897,False
 h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-16_weight_precision-fp8,c1_decode_batch,h100,llama-3.3-70b,16,2,2,0.008053205999803177,0.008053205999803177,1.0080857641620344,False
 h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-1_weight_precision-fp8,c1_decode_batch,h100,llama-3.3-70b,1,2,2,0.03801543248948164,0.03801543248948164,1.038752019887412,False
-h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-256_weight_precision-fp8,c1_decode_batch,h100,llama-3.3-70b,above 64,2,1,0.01250462870022681,,1.0125833034690783,True
 h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-4_weight_precision-fp8,c1_decode_batch,h100,llama-3.3-70b,4 to 8,2,2,0.047884626509572766,0.047884626509572766,1.0490592176669906,False
 h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-64_weight_precision-fp8,c1_decode_batch,h100,llama-3.3-70b,64,2,2,0.033675523474036205,0.033675523474036205,1.0342522547789599,False
 h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-1024_target_batch-64_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,64,2,2,0.0008036913939586392,0.0008036913939586392,1.0008040144837191,False
 h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-1024_target_batch-8_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,4 to 8,2,2,0.03582480035497994,0.03582480035497994,1.0364782126985967,False
-h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-125117_target_batch-3_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,4 to 8,2,2,1.1779717039277156,1.1779717039277156,3.8660125437437056,False
-h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-16384_target_batch-24_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,64,2,2,0.5140202595364696,0.5140202595364696,1.6918267396783326,False
 h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-16384_target_batch-8_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,4 to 8,2,2,0.008834327800136398,0.008834327800136398,1.0088735236082853,False
 h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-4096_target_batch-64_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,64,2,2,0.03876607481021629,0.03876607481021629,1.0395323314698066,False
 h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-4096_target_batch-8_weight_precision-fp8,c2_decode_context,h100,llama-3.3-70b,4 to 8,2,2,0.02731107172640785,0.02731107172640785,1.0276891823489973,False
@@ -389,7 +383,6 @@ h100/qwen3-8b/tp1/c1_decode_batch/target_batch-4_weight_precision-fp8,c1_decode_
 h100/qwen3-8b/tp1/c1_decode_batch/target_batch-64_weight_precision-fp8,c1_decode_batch,h100,qwen3-8b,64,2,2,0.005524438034145595,0.005524438034145595,1.005539740009349,False
 h100/qwen3-8b/tp1/c2_decode_context/context_cached-1024_target_batch-64_weight_precision-fp8,c2_decode_context,h100,qwen3-8b,64,2,2,0.008208885436001418,0.008208885436001418,1.0082427171965755,False
 h100/qwen3-8b/tp1/c2_decode_context/context_cached-1024_target_batch-8_weight_precision-fp8,c2_decode_context,h100,qwen3-8b,4 to 8,2,2,0.0089239741981148,0.0089239741981148,1.0089639713225123,False
-h100/qwen3-8b/tp1/c2_decode_context/context_cached-16384_target_batch-50_weight_precision-fp8,c2_decode_context,h100,qwen3-8b,64,2,2,0.0014921035210698516,0.0014921035210698516,1.0014932175386435,False
 h100/qwen3-8b/tp1/c2_decode_context/context_cached-16384_target_batch-8_weight_precision-fp8,c2_decode_context,h100,qwen3-8b,4 to 8,2,2,0.006314908502813706,0.006314908502813706,1.0063349106935153,False
 h100/qwen3-8b/tp1/c2_decode_context/context_cached-30745_target_batch-26_weight_precision-fp8,c2_decode_context,h100,qwen3-8b,64,2,2,0.00537689043382101,0.00537689043382101,1.0053913848767053,False
 h100/qwen3-8b/tp1/c2_decode_context/context_cached-30745_target_batch-8_weight_precision-fp8,c2_decode_context,h100,qwen3-8b,4 to 8,2,2,0.013033856810638433,0.013033856810638433,1.0131193547059814,False

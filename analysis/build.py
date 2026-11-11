@@ -54,6 +54,11 @@ _VAR_RE = re.compile("(" + "|".join(VARIANT_KEYS) + r")-([^_/]+)")
 # Design grids of the varied batch per cell (config/cells.yaml). A target as run that is not on
 # the grid was resized DOWN by the feasibility generator, so its design point is the smallest
 # grid value at or above it.
+# v1.0.1 cache-reuse rule (data/cache_reuse.csv): a decode-type run keeps its stated cached-context shape only if the
+# in-window prefix-cache hit share was at least this fraction of the expected one. The cut sits in an empty gap of the
+# observed distribution (no run between 0.85 and 0.97). c9 and c9b are exempt: eviction is what they measure.
+CACHE_REUSE_MIN = 0.95
+CACHE_RULE_CELLS = ("c1_decode_batch", "c2_decode_context", "c6_tensor_parallel", "c7_precision")
 DESIGN_BATCH = {"c1_decode_batch": [1, 4, 16, 64, 256], "c2_decode_context": [8, 64], "c3_prefill_miss": [1, 8],
                 "c4_cached_prefix": [1, 8], "c6_tensor_parallel": [1, 16, 64], "c7_precision": [8, 64],
                 "c8_agent_replay": [1, 8], "c9_kv_pressure": [12, 16, 20, 24, 28, 32], "c9b_kv_pressure_diag": [12, 20, 28, 32]}
@@ -87,6 +92,17 @@ def load(path: Path) -> pd.DataFrame:
         df["v_" + k] = pd.to_numeric(df["v_" + k], errors="coerce")
     df["v_gpu_memory_utilization"] = pd.to_numeric(df["v_gpu_memory_utilization"], errors="coerce").fillna(0.9)
     df["design_batch"] = [design_target(c, t) if t == t else -1 for c, t in zip(df.cell, df.v_target_batch)]
+    # v1.0.1: in-window prefix-cache reuse (data/cache_reuse.csv, Appendix C). A decode-type run whose cached context
+    # was recomputed on most requests is not the shape its run id states and is excluded with a stated reason; the
+    # KV-pressure runs (c9, c9b) keep theirs, since eviction is the regime those experiments measure.
+    cr = path.parent / "cache_reuse.csv"
+    if cr.exists():
+        c = pd.read_csv(cr)[["run_id", "cache_reuse_r"]]
+        df = df.merge(c, on="run_id", how="left")
+        evicted = (df.cache_reuse_r < CACHE_REUSE_MIN) & df.cell.isin(CACHE_RULE_CELLS) & df["dropped"].isna()
+        df.loc[evicted, "dropped"] = ["prefix cache evicted in-window (reuse %.2f of expected)" % r for r in df.loc[evicted, "cache_reuse_r"]]
+    else:
+        df["cache_reuse_r"] = np.nan
     df["usable"] = df["dropped"].isna() & df.energy_j.notna()
     df["decode_ok"] = df.usable & df.e_d_j_per_tok.notna() & (df.phase == "decode")
     df["rated_w"] = df.accelerator.map(RATED_W) * df.n_gpus
@@ -502,7 +518,7 @@ def prefill(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
             out.append(dict(model=m, accelerator=a, tp=tp, target_batch=int(tb), fresh_in=int(fi), **{f"e_{k}": v for k, v in b.items()},
                             prompt_tps=tps, power_w=pw["mean"], rated_share=pw["mean"] / (RATED_W[a] * tp)))
     write_table("prefill", pd.DataFrame(rows),
-                "Prefill energy per prompt token with prefix caching off (experiment c3: prefix caching off, one output token; gross board energy including the idle draw). Prompt length is the fresh input; the native-maximum point is the model's context window less a margin, run at 31,200 and 32,511 tokens for the 32k models as the margin rule was tightened. Prompt tokens per second: prompt tokens processed over the window length, mean over runs, no band. Board W and \\% of rated as in Table \\ref{tab:decode_batch}. Brackets: the range over the two pods.",
+                "Prefill energy per prompt token with prefix caching off (experiment c3: prefix caching off, one output token; gross board energy including the idle draw). Prompt length is the fresh input; the native-maximum point is the model's context window less a margin, run at 31,200 and 32,511 tokens for the 32k models as the margin rule was tightened. Prompt tokens per second: the runs' prompt tokens over their window lengths, pooled, no band. Board W and \\% of rated as in Table \\ref{tab:decode_batch}. Brackets: the range over the two pods.",
                 "tab:prefill", col_fmt="llrrrlrlrrl", longtable=True)
     o = pd.DataFrame(out)
     hl = {}
@@ -678,10 +694,12 @@ def kv_pressure(df: pd.DataFrame, head: dict) -> None:
                      "Mean KV use": f"{r.sched_kv_usage_mean:.0%}" if r.sched_kv_usage_mean == r.sched_kv_usage_mean else "--",
                      "Mean waiting": f"{r.sched_waiting_mean:.1f}" if r.sched_waiting_mean == r.sched_waiting_mean else "--",
                      "Preemptions": (f"{int(r.sched_preemptions_delta)}" if r.sched_preemptions_counter_present else "not recorded"),
-                     "Collapsed": "yes" if r.e_d_j_per_tok >= 3 else "no", "Idle-drift flag": "yes" if r.n_flags else "no"})
+                     "Collapsed": "yes" if r.e_d_j_per_tok >= 3 else "no",
+                     "Cache reuse": f"{r.cache_reuse_r:.2f}" if r.cache_reuse_r == r.cache_reuse_r else "--",
+                     "Idle-drift flag": "yes" if "idle drift" in str(r["flags"]) else "no"})
     write_table("kv_pressure", pd.DataFrame(rows),
-                "KV-cache pressure on Llama-3.3-70B, one B200, 16,384 cached context, 200 fresh input and 256 output tokens (experiments c9 and c9b). Each row is one run, so no band; both experiments ran on one pod each. J per output token is gross board energy including the idle draw. GPU memory offer: the fraction of the board's memory the server was allowed, which sets the KV-cache pool. Mean KV use: the server's mean KV-cache occupancy over the middle 80\\% of the window. Mean waiting: requests admitted but not running. Preemptions: the server's preemption count over the window, recorded only in c9b ('not recorded' is missing telemetry, not zero). Collapsed: the run's energy per token exceeded 3 J, the gap between the two regimes. Idle-drift flag: the idle power before and after the window differed by more than 5\\% (the run is kept and marked). \\% of rated: board W over 1,000 W.",
-                "tab:kv", col_fmt="llrrrrrrrrlll", longtable=True)
+                "KV-cache pressure on Llama-3.3-70B, one B200, 16,384 cached context, 200 fresh input and 256 output tokens (experiments c9 and c9b). Each row is one run, so no band; both experiments ran on one pod each. J per output token is gross board energy including the idle draw. GPU memory offer: the fraction of the board's memory the server was allowed, which sets the KV-cache pool. Mean KV use: the server's mean KV-cache occupancy over the middle 80\\% of the window. Mean waiting: requests admitted but not running. Preemptions: the server's preemption count over the window, recorded only in c9b ('not recorded' is missing telemetry, not zero). Collapsed: the run's energy per token exceeded 3 J, the gap between the two regimes. Cache reuse: the in-window prefix-cache hit share as a fraction of the expected one (Appendix C); near 1 the cached context was served from cache, near 0 it was recomputed on every request. Idle-drift flag: the idle power before and after the window differed by more than 5\\% (the run is kept and marked). \\% of rated: board W over 1,000 W.",
+                "tab:kv", col_fmt="llrrrrrrrrllll", longtable=True)
     clean = d[d.e_d_j_per_tok < 3]
     collapsed = d[d.e_d_j_per_tok >= 3]
     head["kv_pressure"] = {"clean_e_range": [float(clean.e_d_j_per_tok.min()), float(clean.e_d_j_per_tok.max())],
@@ -1011,7 +1029,7 @@ def factors(o1, o2, o4, o6, o7, df, head) -> pd.DataFrame:
                 dbl.append(math.log2(g.context.iloc[-1] / g.context.iloc[0]))
         return r, dbl
     r64, d64 = ctx(64)
-    out.append(agg("Context length, batch 64", "longest context without a collapse (4k for Llama-3.3-70B, 31k to 32k for the others) over 1k, design batch 64; long context forced a smaller batch on some servers", r64, "J per output token",
+    out.append(agg("Context length, batch 64", "longest context whose runs kept their cache (4k for Llama-3.3-70B on H100, 16k on B200, 31k to 32k for the others) over 1k, design batch 64; long context forced a smaller batch on some servers", r64, "J per output token",
                    "rises with context and more steeply at deep batch, where the stored context fills memory", "sec:context", doublings=d64))
     r8, d8 = ctx(8)
     out.append(agg("Context length, batch 8", "longest context (16k to 32k) over 1k, design batch 8", r8, "J per output token",
@@ -1157,7 +1175,7 @@ def fig_context_multiplier(o2: pd.DataFrame):
         ax.set_yticks([1, 2, 5, 10]); ax.set_yticklabels(["1", "2", "5", "10"])
     axes[0].set_ylabel("J per output token, relative to 1k")
     fig.legend(frameon=False, ncol=4, fontsize=7, loc="lower center", bbox_to_anchor=(0.5, -0.17))
-    fig.text(0.5, -0.25, "Dashed: design batch 8. Solid: design batch 64. Circled: the server could not hold the design batch at that context and ran a smaller one. Crosses: the two runs of a collapsed configuration.",
+    fig.text(0.5, -0.25, "Dashed: design batch 8. Solid: design batch 64. Circled: the server could not hold the design batch at that context and ran a smaller one.",
              ha="center", fontsize=7.2, color="#4a4a47")
     _save(fig, "fig_context_multiplier")
     plt.close(fig)

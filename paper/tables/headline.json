@@ -28,13 +28,13 @@
   }
  },
  "runs": 917,
- "usable_runs": 913,
+ "usable_runs": 902,
  "configs": 472,
  "configs_two_repeats": 445,
- "configs_two_usable": 445,
+ "configs_two_usable": 438,
  "configs_two_pods": 413,
  "configs_one_pod": 59,
- "configs_no_usable": 4,
+ "configs_no_usable": 8,
  "configs_one_run": 27,
  "pods": 13,
  "data_centers": 8,
@@ -45,11 +45,22 @@
   "qwen3-30b-a3b",
   "qwen3-8b"
  ],
- "window_rows_dropped": 4,
+ "window_rows_dropped": 15,
  "dropped_runs": [
+  "h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-256_weight_precision-fp8/r1",
+  "h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-256_weight_precision-fp8/r2",
+  "h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-16384_target_batch-24_weight_precision-fp8/r1",
+  "h100/qwen3-8b/tp1/c2_decode_context/context_cached-16384_target_batch-50_weight_precision-fp8/r2",
   "h100/qwen3-8b/tp1/c2_decode_context/context_cached-32768_target_batch-25_weight_precision-fp8/r2",
+  "b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-16384_target_batch-31_weight_precision-fp8/r2",
+  "b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-31_weight_precision-fp8/r2",
+  "b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-44_weight_precision-nvfp4/r1",
+  "b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-44_weight_precision-nvfp4/r2",
   "b200/qwen3-8b/tp1/c2_decode_context/context_cached-32768_target_batch-61_weight_precision-fp8/r2",
   "b200/qwen3-8b/tp1/c2_decode_context/context_cached-32768_target_batch-8_weight_precision-fp8/r1",
+  "h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-125117_target_batch-3_weight_precision-fp8/r2",
+  "h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-16384_target_batch-24_weight_precision-fp8/r2",
+  "h100/qwen3-8b/tp1/c2_decode_context/context_cached-16384_target_batch-50_weight_precision-fp8/r1",
   "h100/qwen3-8b/tp1/c2_decode_context/context_cached-32768_target_batch-8_weight_precision-fp8/r1"
  ],
  "one_pod_configs_by_cell": {
@@ -66,7 +77,7 @@
   "c7 fp8-only runs of the MoE models (no nvfp4 checkpoint)": 16,
   "c8 early Qwen3-8B replays with a 32,768 context cap, one run each": 4,
   "c3 runs at a 32,768-token prompt whose every request was refused (no prompt tokens)": 4,
-  "runs with no usable window": 4
+  "runs with no usable window": 15
  },
  "idle_w_per_gpu": {
   "deepseek-v2-lite/b200": 244.7152029321768,
@@ -221,28 +232,28 @@
     59.9711662371134
    ],
    "bmax": [
-    0.7033475715186329,
-    0.6989500214041096,
-    0.7077451216331563,
-    "medium",
-    82.65087412587413
+    0.5409403628488756,
+    0.53183213790529,
+    0.550048587792461,
+    "high",
+    59.9711662371134
    ],
-   "ratio": 21.870260878502105,
+   "ratio": 28.436396937292052,
    "ratio_b1_b64": 28.436396937292052,
-   "turn_up_bmax_over_b64": 1.300231263598885,
+   "turn_up_bmax_over_b64": 1.0,
    "tp": 2,
    "tokens_per_s_bmax": [
-    1883.1865960254738,
-    1877.2112572806654,
-    1889.1619347702822
+    2300.1213661090364,
+    2281.8265009733755,
+    2318.4162312446974
    ],
    "power_range_w": [
     927.9201576406975,
-    1324.7712565341967
+    1244.6307026091781
    ],
    "rated_share_range": [
     0.6628001126004982,
-    0.9462651832387119
+    0.8890219304351272
    ]
   },
   "qwen3-30b-a3b/b200": {
@@ -421,7 +432,7 @@
   ],
   "rated_share_all": [
    0.35122088806002943,
-   0.9462651832387119
+   0.9266964698744885
   ]
  },
  "b200_same_gpus": {
@@ -616,12 +627,6 @@
      0.6692365453065355,
      0.7354522439260042,
      "high"
-    ],
-    "256": [
-     0.4800539917442326,
-     0.4703363396168299,
-     0.4898939240373614,
-     "medium"
     ]
    }
   }
@@ -747,12 +752,6 @@
     0.6692365453065355,
     0.7354522439260042,
     "high"
-   ],
-   "256": [
-    0.4800539917442326,
-    0.4703363396168299,
-    0.4898939240373614,
-    "medium"
    ]
   }
  },
@@ -849,39 +848,39 @@
   },
   "llama-3.3-70b/b200/B64": {
    "ctx_min": 1024,
-   "ctx_max": 4096,
+   "ctx_max": 16384,
    "e_min_ctx": [
     0.38203519015842013,
     0.3683420138888889,
     0.3957283664279514
    ],
    "e_max_ctx": [
-    0.47782031114667056,
-    0.47127123752771616,
-    0.484369384765625
+    1.092774427563364,
+    1.092774427563364,
+    1.092774427563364
    ],
-   "B_max_ctx": 60.33505461767626,
-   "target_as_run_max_ctx": 64,
-   "ratio": 1.250723293182837,
-   "conf": "high"
+   "B_max_ctx": 29.673076923076923,
+   "target_as_run_max_ctx": 31,
+   "ratio": 2.860402538075664,
+   "conf": "medium"
   },
   "llama-3.3-70b/h100/B8": {
    "ctx_min": 1024,
-   "ctx_max": 16384,
+   "ctx_max": 125117,
    "e_min_ctx": [
     2.215329432896205,
     2.1756475655691965,
     2.255011300223214
    ],
    "e_max_ctx": [
-    2.909806884765625,
-    2.8969537908380683,
-    2.9226599786931815
+    11.397583333333333,
+    11.397583333333333,
+    11.397583333333333
    ],
-   "B_max_ctx": 7.777721774193548,
-   "target_as_run_max_ctx": 8,
-   "ratio": 1.3134872139361669,
-   "conf": "high"
+   "B_max_ctx": 2.8012618296529967,
+   "target_as_run_max_ctx": 3,
+   "ratio": 5.144870629210542,
+   "conf": "medium"
   },
   "llama-3.3-70b/h100/B64": {
    "ctx_min": 1024,
@@ -1046,56 +1045,7 @@
    "conf": "high"
   }
  },
- "decode_context_flagged": [
-  {
-   "model": "llama-3.3-70b",
-   "accelerator": "b200",
-   "target_batch": 64,
-   "target_as_run": 31,
-   "context": 16384,
-   "flag": "regimes differ",
-   "e_runs": [
-    1.092774427563364,
-    4.379120090309633
-   ]
-  },
-  {
-   "model": "llama-3.3-70b",
-   "accelerator": "h100",
-   "target_batch": 8,
-   "target_as_run": 3,
-   "context": 125117,
-   "flag": "regimes differ",
-   "e_runs": [
-    11.397583333333333,
-    44.06320013503086
-   ]
-  },
-  {
-   "model": "llama-3.3-70b",
-   "accelerator": "h100",
-   "target_batch": 64,
-   "target_as_run": 24,
-   "context": 16384,
-   "flag": "regimes differ",
-   "e_runs": [
-    5.985290326286766,
-    10.126074218750002
-   ]
-  },
-  {
-   "model": "qwen3-8b",
-   "accelerator": "h100",
-   "target_batch": 64,
-   "target_as_run": 50,
-   "context": 16384,
-   "flag": "above batch-8 figure",
-   "e_runs": [
-    1.5490779418945313,
-    1.5513910522460939
-   ]
-  }
- ],
+ "decode_context_flagged": [],
  "prefill": {
   "deepseek-v2-lite/b200/B1": {
    "points": [
@@ -2517,26 +2467,6 @@
    "B_nvfp4": 57.85955056179775
   },
   {
-   "model": "llama-3.3-70b",
-   "accelerator": "b200",
-   "target_batch": 64,
-   "context": 16384,
-   "r_n": 4,
-   "r_pods": 2,
-   "r_pods_str": "1 / 2",
-   "r_mean": 1.2268640638716464,
-   "r_lo": 0.7417579980272084,
-   "r_hi": 3.439094722785014,
-   "r_conf": "low",
-   "r_band_kind": "unpaired (lowest to highest combination)",
-   "r_pairing": "none",
-   "e_fp8": 3.06585571977524,
-   "e_nvfp4": 3.761388207607582,
-   "tps_ratio": 0.4925927009031313,
-   "B_fp8": 26.349038461538463,
-   "B_nvfp4": 24.255894192064403
-  },
-  {
    "model": "qwen3-8b",
    "accelerator": "b200",
    "target_batch": 8,
@@ -2998,25 +2928,28 @@
   "n_collapsed": 5
  },
  "variability": {
-  "decode_repeat_cv_median": 0.021428471262281826,
-  "decode_repeat_cv_p90": 0.1005712250614761,
-  "decode_pod_cv_median": 0.027412286443989797,
+  "decode_repeat_cv_median": 0.02071631460591806,
+  "decode_repeat_cv_p90": 0.08905569951576076,
+  "decode_pod_cv_median": 0.026739054780369177,
   "decode_same_pod_cv": [
-   0.007830371575645846,
-   0.01636977182686315,
-   32
+   0.00600036775781901,
+   0.015626902563650028,
+   30
   ],
   "decode_cross_pod_cv": [
-   0.027412286443989797,
-   0.10668192234195249,
-   129
+   0.026739054780369177,
+   0.09995183753150011,
+   124
   ],
-  "decode_pod_cv_p90": 0.10668192234195249,
-  "n_decode_repeat": 161,
-  "n_decode_pod": 129,
-  "n_configs_in_tables": 440,
-  "n_two_pod_in_tables": 408,
+  "decode_pod_cv_p90": 0.09995183753150011,
+  "n_decode_repeat": 154,
+  "n_decode_pod": 124,
+  "n_configs_in_tables": 433,
+  "n_two_pod_in_tables": 403,
   "excluded_configs": [
+   "b200/llama-3.3-70b/tp1/c2_decode_context/context_cached-16384_target_batch-31_weight_precision-fp8",
+   "b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-31_weight_precision-fp8",
+   "h100/llama-3.3-70b/tp2/c2_decode_context/context_cached-125117_target_batch-3_weight_precision-fp8",
    "h100/llama-3.3-70b/tp2/c3_prefill_miss/fresh_in-125572_target_batch-1_weight_precision-fp8",
    "h100/llama-3.3-70b/tp2/c3_prefill_miss/fresh_in-125572_target_batch-3_weight_precision-fp8",
    "h100/llama-3.3-70b/tp2/c3_prefill_miss/fresh_in-16384_target_batch-8_weight_precision-fp8",
@@ -3035,10 +2968,10 @@
    {
     "Accelerator": "H100",
     "Target batch": "4 to 8",
-    "Repeat difference median / p90": "1.8% / 4.3% (n=21)",
-    "Between-pod difference median / p90": "1.8% / 4.3% (n=21)",
-    "Configs": 21,
-    "Repeat difference max": "117.8%"
+    "Repeat difference median / p90": "1.7% / 3.7% (n=20)",
+    "Between-pod difference median / p90": "1.7% / 3.7% (n=20)",
+    "Configs": 20,
+    "Repeat difference max": "4.8%"
    },
    {
     "Accelerator": "H100",
@@ -3051,17 +2984,17 @@
    {
     "Accelerator": "H100",
     "Target batch": "64",
-    "Repeat difference median / p90": "1.0% / 16.3% (n=20)",
-    "Between-pod difference median / p90": "1.2% / 16.5% (n=18)",
-    "Configs": 20,
-    "Repeat difference max": "51.4%"
+    "Repeat difference median / p90": "1.0% / 14.4% (n=18)",
+    "Between-pod difference median / p90": "1.2% / 14.9% (n=16)",
+    "Configs": 18,
+    "Repeat difference max": "17.1%"
    },
    {
     "Accelerator": "H100",
     "Target batch": "above 64",
-    "Repeat difference median / p90": "0.8% / 5.6% (n=4)",
+    "Repeat difference median / p90": "0.3% / 6.1% (n=3)",
     "Between-pod difference median / p90": "--",
-    "Configs": 4,
+    "Configs": 3,
     "Repeat difference max": "7.5%"
    },
    {
@@ -3091,10 +3024,10 @@
    {
     "Accelerator": "B200",
     "Target batch": "64",
-    "Repeat difference median / p90": "4.6% / 7.3% (n=20)",
-    "Between-pod difference median / p90": "4.6% / 7.3% (n=20)",
-    "Configs": 20,
-    "Repeat difference max": "120.1%"
+    "Repeat difference median / p90": "4.1% / 7.2% (n=19)",
+    "Between-pod difference median / p90": "4.1% / 7.2% (n=19)",
+    "Configs": 19,
+    "Repeat difference max": "7.4%"
    },
    {
     "Accelerator": "B200",
@@ -3123,11 +3056,11 @@
     "same_pod": 0
    },
    "h100": {
-    "repeat_cv_median": 0.007768558330331509,
+    "repeat_cv_median": 0.0030324879604362058,
     "repeat_cv_max": 0.07519855082703106,
     "pod_cv_median": null,
-    "n": 4,
-    "same_pod": 4
+    "n": 3,
+    "same_pod": 3
    }
   }
  },
@@ -3178,18 +3111,18 @@
    0.3668407032837047
   ],
   "h100/B256": [
-   0.23006236351902057,
-   0.1853110370815889,
+   0.2330464419148629,
+   0.2274608362795504,
    0.2982051859441603
   ]
  },
  "idle_share_summary": {
   "median_range": [
-   0.23006236351902057,
+   0.2330464419148629,
    0.5708007241038764
   ],
   "span": [
-   0.1853110370815889,
+   0.2036038289949102,
    0.6786613929456609
   ]
  },
@@ -3335,17 +3268,17 @@
   {
    "factor": "Batch",
    "comparison": "one request at a time over the deepest batch",
-   "median": 20.14956426645999,
+   "median": 20.725079423644253,
    "lo": 13.604674572278814,
    "hi": 42.25188359375383,
    "n": 8,
    "unit": "J per output token",
    "tell": "the dominant lever on every model and both GPUs",
    "section": "sec:batch",
-   "per_doubling": 1.6010392928780774,
+   "per_doubling": 1.6281574655310407,
    "per_doubling_lo": 1.4907483746098122,
    "per_doubling_hi": 1.776149660778531,
-   "doublings_lo": 6.078031860156243,
+   "doublings_lo": 5.923121728892208,
    "doublings_hi": 6.537830185673419,
    "p90_only": NaN,
    "spread": 42.25188359375383
@@ -3388,16 +3321,16 @@
   },
   {
    "factor": "Context length, batch 64",
-   "comparison": "longest context without a collapse (4k for Llama-3.3-70B, 31k to 32k for the others) over 1k, design batch 64; long context forced a smaller batch on some servers",
-   "median": 3.1153730873095093,
-   "lo": 1.250723293182837,
+   "comparison": "longest context whose runs kept their cache (4k for Llama-3.3-70B on H100, 16k on B200, 31k to 32k for the others) over 1k, design batch 64; long context forced a smaller batch on some servers",
+   "median": 3.1944841342292234,
+   "lo": 1.290532215843597,
    "hi": 9.785483327299026,
    "n": 8,
    "unit": "J per output token",
    "tell": "rises with context and more steeply at deep batch, where the stored context fills memory",
    "section": "sec:context",
-   "per_doubling": 1.257209465052345,
-   "per_doubling_lo": 1.1183574085160954,
+   "per_doubling": 1.2967038618977345,
+   "per_doubling_lo": 1.1360159399601737,
    "per_doubling_hi": 1.5826331423027686,
    "doublings_lo": 2.0,
    "doublings_hi": 4.968306794430798,
@@ -3443,10 +3376,10 @@
   {
    "factor": "One B200 against two H100s",
    "comparison": "one B200 over the two H100s Llama-3.3-70B needs, at the same batch; changes GPU generation and GPU count together, and at the highest load also the cache reuse",
-   "median": 0.8190401826180327,
-   "lo": 0.4800539917442326,
+   "median": 0.8552587540493803,
+   "lo": 0.7017869325379674,
    "hi": 0.9274322556358722,
-   "n": 5,
+   "n": 4,
    "unit": "J per output token",
    "tell": "a saving because the larger memory holds the model on fewer GPUs",
    "section": "sec:b200",
@@ -3456,7 +3389,7 @@
    "doublings_lo": NaN,
    "doublings_hi": NaN,
    "p90_only": NaN,
-   "spread": 2.0830990205218183
+   "spread": 1.4249339131801217
   },
   {
    "factor": "Weight precision",
@@ -3497,10 +3430,10 @@
   {
    "factor": "Repeat-to-repeat variation",
    "comparison": "the larger over the smaller of two repeats",
-   "median": 1.0216605474717941,
+   "median": 1.0209334050277479,
    "lo": 1.0000169615007093,
-   "hi": 1.1058962845971745,
-   "n": 161,
+   "hi": 1.0932217509822735,
+   "n": 154,
    "unit": "J per output token",
    "tell": "small against most of the levers above, though not against the smallest",
    "section": "sec:variability",
@@ -3510,7 +3443,7 @@
    "doublings_lo": NaN,
    "doublings_hi": NaN,
    "p90_only": true,
-   "spread": 1.1058962845971745
+   "spread": 1.0932217509822735
   }
  ]
 }

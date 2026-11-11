@@ -8,17 +8,17 @@
 Experiment & \makecell[l]{Repeat\\difference\\median / p90} & \makecell[l]{Between-pod\\difference\\median / p90} & \makecell[r]{Configs with\\2 pods} & \makecell[r]{Configs on\\one pod} \\
 \midrule
 c0\_static & 3.9\% / 5.7\% (n=8) & 3.9\% / 5.7\% (n=8) & 8 & 0 \\
-c1\_decode\_batch & 2.9\% / 9.5\% (n=40) & 3.1\% / 9.7\% (n=36) & 36 & 4 \\
-c2\_decode\_context & 2.5\% / 11.4\% (n=67) & 2.7\% / 11.6\% (n=65) & 65 & 2 \\
+c1\_decode\_batch & 2.9\% / 9.5\% (n=39) & 3.1\% / 9.7\% (n=36) & 36 & 3 \\
+c2\_decode\_context & 2.5\% / 9.8\% (n=63) & 2.5\% / 10.2\% (n=61) & 61 & 2 \\
 c3\_prefill\_miss & 4.8\% / 24.4\% (n=63) & 4.8\% / 24.4\% (n=63) & 63 & 0 \\
 c4\_cached\_prefix & 2.2\% / 8.6\% (n=192) & 2.2\% / 8.6\% (n=192) & 192 & 0 \\
 c6\_tensor\_parallel & 1.0\% / 2.5\% (n=24) & 1.4\% / 6.9\% (n=12) & 12 & 12 \\
-c7\_precision & 3.3\% / 9.4\% (n=24) & 5.5\% / 10.4\% (n=16) & 16 & 8 \\
+c7\_precision & 3.3\% / 7.5\% (n=22) & 5.3\% / 9.1\% (n=15) & 15 & 7 \\
 c8\_agent\_replay & 1.3\% / 9.2\% (n=16) & 1.3\% / 9.2\% (n=16) & 16 & 0 \\
 c9\_kv\_pressure & 0.3\% / 0.8\% (n=6) & -- & 0 & 6 \\
-all decode experiments & 2.1\% / 10.1\% (n=161) & 2.7\% / 10.7\% (n=129) & 129 & 32 \\
-decode, both repeats on one pod & 0.8\% / 1.6\% (n=32) & -- & 0 & 32 \\
-decode, repeats on two pods & 2.7\% / 10.7\% (n=129) & 2.7\% / 10.7\% (n=129) & 129 & 0 \\
+all decode experiments & 2.1\% / 8.9\% (n=154) & 2.7\% / 10.0\% (n=124) & 124 & 30 \\
+decode, both repeats on one pod & 0.6\% / 1.6\% (n=30) & -- & 0 & 30 \\
+decode, repeats on two pods & 2.7\% / 10.0\% (n=124) & 2.7\% / 10.0\% (n=124) & 124 & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}

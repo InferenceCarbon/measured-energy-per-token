@@ -4,6 +4,7 @@ Two tables hold the corpus. Both are frozen: they are the files the paper was bu
 
 - `features.parquet`: one row per run (917 rows). The analysis script reads this file.
 - `store_tables/cells.parquet`: one row per metered window (2,841 rows), with three windows per run: `idle_before`, `active` and `idle_after`. This table holds the per-window telemetry and the server's counters.
+- `cache_reuse.csv` (added in version 1.0.1): one row per run with a cached context (529 rows): the in-window prefix-cache reuse the run achieved as a fraction of the expected (`cache_reuse_r`, blank for six early runs whose counters were not recorded), with the cached and fresh token counts used. The analysis script reads it to exclude decode runs below 0.95 (Appendix C of the paper); `features.parquet` itself is unchanged from version 1.0.0.
 
 The raw power samples, per-run records, counter qualification and server logs are in the Zenodo deposit, under `raw/`. They are not in this repository.
 
@@ -19,7 +20,7 @@ Energy is gross GPU-board energy: the board's cumulative energy counter at the e
 | `cell`, `repeat` | Experiment label (c0 to c9b) and repeat number. |
 | `pod_id`, `data_center` | Marketplace pod identifier and data center code. These are not hardware serial numbers. |
 | `flags`, `n_flags` | Quality flags raised by the harness, such as idle drift (the idle power before and after the window differed by more than 5%). |
-| `energy_j`, `duration_s`, `mean_power_w` | Gross board energy of the active window (J), its length (s), and energy over length (W). |
+| `energy_j`, `duration_s`, `mean_power_w` | Gross board energy of the active window (J), its length (s), and the mean board power the harness computed from the power samples (W). `mean_power_w` differs from `energy_j / duration_s` by up to 0.6 W; the paper's energy figures use `energy_j`. |
 | `idle_power_w` | Mean board power over the run's two bracketing 60 s idle windows (W). |
 | `loaded_idle_power_w` | Experiment c0 only: board power with the model loaded and no requests (W). |
 | `arch`, `attention` | Dense or MoE, and the attention type. |
@@ -35,7 +36,7 @@ Energy is gross GPU-board energy: the board's cumulative energy counter at the e
 | `control`, `prefix_cached`, `fresh_in`, `out`, `n_requests` | Cached-prefix workload: cached or uncached side, prefix length, fresh input, output budget, and requests completed. |
 | `cached_tokens` | **Not a measurement.** The server did not report per-request cached tokens. The harness stored a missing value as 0, so this field is 0 or empty everywhere. To see cache reuse, use the server counters in `cells.parquet`, with the caveats given there. |
 | `q_W`, `q_KV`, `tau`, `W_batch_bytes`, `K_bytes`, `union_source` | Model-based predictors kept for later modelling: weight bytes per output token at the achieved batch, KV bytes attended per output token, seconds per output token, and their inputs. For MoE models the weight bytes use a routing estimate (`union_source`). These are computed from the model architecture, not measured, and the paper does not use them. |
-| `dropped` | The reason a run was excluded, if it was. Empty for usable runs. |
+| `dropped` | The reason a run was excluded, if it was. Empty for usable runs. In the file, four runs carry a reason (no usable window); the analysis script adds the eleven cache-eviction exclusions of version 1.0.1 at load time from `cache_reuse.csv`, so the frozen file is unchanged. |
 
 ## store_tables/cells.parquet
 
