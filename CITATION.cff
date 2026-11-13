@@ -2,10 +2,14 @@ cff-version: 1.2.0
 message: "Please cite the paper. The arXiv identifier will be added once assigned."
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.24014980
-    description: "Zenodo deposit: corpus, raw records, harness and analysis code"
+    value: 10.5281/zenodo.24201206
+    description: "Zenodo deposit, version 1.0.1: paper, corpus, raw records, harness and analysis code"
+  - type: doi
+    value: 10.5281/zenodo.24014979
+    description: "Zenodo concept DOI: resolves to the latest version"
 title: "Measured Energy per Token for Four Open Language Models on NVIDIA H100 and B200, Analyzed by Batch, Context, Precision, Tensor Parallelism and Prefix Caching"
 type: article
+version: "1.0.1"
 authors:
   - family-names: Manktelow
     given-names: James
