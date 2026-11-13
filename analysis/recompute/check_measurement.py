@@ -176,7 +176,13 @@ for _, r in P.iterrows():
         twin = c2[(c2.model == g.model.iloc[0]) & (c2.accelerator == g.accelerator.iloc[0]) & (c2.tp == g.tp.iloc[0]) & (c2.design == 8) & (c2.ctx == g.ctx.iloc[0])]
         if len(twin) and c > agg(twin, "e_tok")[0]:
             flag = "above batch-8 figure"
-    T.check(key, "Collapse", r.Collapse, flag)
+    # v1.0.1: the Collapse column is gone (no flagged row survives the cache-reuse rule); a flagged row would list
+    # its two runs in the J cell, marked "(runs differ)"
+    T.check(key, "flag marker in J cell", "runs differ" if "(runs differ)" in str(r["J per output token"]) else "no",
+            "no" if flag == "no" else "runs differ")
+    cw, low, hiw, _, _ = agg(g, "W")
+    band_fields(T, key, "Board W", r["Board W"], cw, low, hiw, nruns)
+    T.check(key, "% of rated", r["% of rated"], [100 * cw / g.rated.iloc[0]])
     if flag != "no":
         T.check(key, "J per output token (two runs, sorted)", r["J per output token"], sorted(g.e_tok))
     else:

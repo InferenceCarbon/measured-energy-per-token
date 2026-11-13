@@ -289,7 +289,7 @@ dc = pd.read_csv(T + 'decode_context.csv'); dc['e'] = dc['J per output token'].m
 dc['cc'] = dc['Cached context (tokens)'].map(num); dc['ac'] = dc['Attended context (tokens)'].map(num)
 for label, design, cap in [('Context length, batch 64', 64, np.inf), ('Context length, batch 8', 8, 32768)]:   # batch 8: "longest context (16k to 32k)"
     rat, d_c, d_a = [], [], []
-    for (m, a), g in dc[(dc['Design target B'] == design) & (dc.Collapse == 'no') & (dc.cc <= cap)].groupby(['Model', 'Acc.']):
+    for (m, a), g in dc[(dc['Design target B'] == design) & ~dc['J per output token'].astype(str).str.contains('runs differ') & (dc.cc <= cap)].groupby(['Model', 'Acc.']):
         base = g[g.cc == 1024]; top = g[g.cc == g.cc.max()]; assert len(base) == 1 and len(top) == 1, (m, a, design)
         rr = top.e.iloc[0] / base.e.iloc[0]; rat.append(rr)
         d_c.append(rr ** (1 / math.log2(top.cc.iloc[0] / base.cc.iloc[0]))); d_a.append(rr ** (1 / math.log2(top.ac.iloc[0] / base.ac.iloc[0])))

@@ -1,4 +1,4 @@
-**Share of the decode window's mean board power that the pod drew while idle with the model loaded (the idle windows bracketing each run of experiment c1, 1k cached context). Gross energy per token includes this share. Median, minimum and maximum over the runs of all four models at that target batch; no band, as the quantity is a ratio of two means of the same run.**
+**Idle share of decode power in the batch experiment (c1: 1k cached context, 200 fresh input and 256 output tokens). For each run, the board power the pod drew while idle with the model loaded, the mean of the 60 s idle windows before and after the run, divided by the mean board power of its decode window. Gross energy per token includes this share. Median, minimum and maximum over the runs of all four models at each target batch. No band, because each value is a ratio of two means from the same run.**
 
 | Accelerator | Target B | Idle share of board power, median | min to max |
 |---|---|---|---|

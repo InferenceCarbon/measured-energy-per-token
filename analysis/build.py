@@ -209,6 +209,12 @@ class Bands:
                 "conf": "low" if low else conf, "band_kind": "unpaired (lowest to highest combination)", "pairing": "none"}
 
 
+def quotient_gap(rows: list[tuple[float, float, float]]) -> float:
+    """Largest relative gap between (mean board W / mean token rate) and the mean energy per token,
+    over a table's rows. Per run the quotient is exact; over runs a mean of ratios is not a ratio of means."""
+    return max(abs(w / r / e - 1) for w, r, e in rows if r and e) if rows else 0.0
+
+
 def fmt(x: float, sig: int = 3, extra: int = 0) -> str:
     """Three significant figures (one decimal from 10, none from 100); `extra`
     adds digits where a band would otherwise print with zero width."""
@@ -385,7 +391,7 @@ def idle_table(df: pd.DataFrame, boot: Bands, head: dict) -> None:
 
 def decode_batch(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
     d = df[(df.cell == "c1_decode_batch") & df.decode_ok]
-    rows, out = [], []
+    rows, out, gaps = [], [], []
     for (m, a, tp), g in d.groupby(["model", "accelerator", "tp"]):
         for tb, gg in g.groupby("v_target_batch"):
             b = boot.band(gg.e_d_j_per_tok, gg.pod_id)
@@ -395,16 +401,17 @@ def decode_batch(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
             rated = RATED_W[a] * tp
             rows.append({"Model": MODEL_LABEL[m], "Acc.": ACC_LABEL[a], "TP": tp, "Target B": int(tb),
                          "Achieved B": f"{B:.1f}", "Mean KV use": f"{gg.sched_kv_usage_mean.mean():.0%}" if "sched_kv_usage_mean" in gg and gg.sched_kv_usage_mean.notna().any() else "--",
-                         "J per output token": band_str(b), "Tokens per second": band_str(tps, 3),
-                         "Board W": band_str(pw, 3), "% of rated": f"{pw['mean'] / rated:.0%}", "Pods": b["pods"], "Conf.": b["conf"]})
+                         "Board W": band_str(pw, 3), "% of rated": f"{pw['mean'] / rated:.0%}", "Tokens per second": band_str(tps, 3),
+                         "J per output token": band_str(b), "Pods": b["pods"], "Conf.": b["conf"]})
+            gaps.append((pw["mean"], tps["mean"], b["mean"]))
             out.append(dict(model=m, accelerator=a, tp=tp, target_batch=int(tb), B=B, **{f"e_{k}": v for k, v in b.items()},
                             tokens_per_s=tps["mean"], tps_lo=tps["lo"], tps_hi=tps["hi"], power_w=pw["mean"], power_lo=pw["lo"], power_hi=pw["hi"],
                             rated_share=pw["mean"] / rated))
     o = pd.DataFrame(out)
     top = o[o.target_batch == 256]
     write_table("decode_batch", pd.DataFrame(rows),
-                f"Energy per output token of the decode workload against batch (experiment c1: 1k cached context, 200 fresh input tokens, 256 output tokens; gross board energy including the idle draw). Target B is the number of requests the client kept in flight. Achieved B is the server's mean count of running requests over the middle 80\\% of the window. At target 256 the client's HTTP connection pool (100 connections, the library default) let at most 100 requests stream at once, and the server ran {top.B.min():.0f} to {top.B.max():.0f} on average, so that row is the highest load we offered, not the most the GPU could hold. Mean KV use: the server's mean KV-cache occupancy over the same part of the window. Board W is the mean board power over the window summed over the GPUs in the TP column, and \\% of rated divides it by 700 W per H100 or 1,000 W per B200. Brackets: the range over the two pods (one pod: the range of the repeats). TP: tensor-parallel degree (GPUs sharing the model).",
-                "tab:decode_batch", col_fmt="llrrrrlllrrl", longtable=True)
+                f"Energy per output token of the decode workload against batch (experiment c1: 1k cached context, 200 fresh input tokens, 256 output tokens; gross board energy including the idle draw). Target B is the number of requests the client kept in flight. Achieved B is the server's mean count of running requests over the middle 80\\% of the window. At target 256 the client's HTTP connection pool (100 connections, the library default) let at most 100 requests stream at once, and the server ran {top.B.min():.0f} to {top.B.max():.0f} on average, so that row is the highest load we offered, not the most the GPU could hold. Mean KV use: the server's mean KV-cache occupancy over the same part of the window. Board W is the mean board power over the window summed over the GPUs in the TP column, and \\% of rated divides it by 700 W per H100 or 1,000 W per B200. J per output token equals Board W divided by tokens per second to within {math.ceil(100 * quotient_gap(gaps))}\\%; the small difference arises because each column is a mean over runs. Brackets: the range over the two pods (one pod: the range of the repeats). TP: tensor-parallel degree (GPUs sharing the model).",
+                "tab:decode_batch", col_fmt="llrrrrlrllrl", longtable=True)
     # headline: batch 1 vs highest bin per model x accelerator
     hl = {}
     for (m, a), g in o.groupby(["model", "accelerator"]):
@@ -463,7 +470,7 @@ def decode_batch(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
 
 def decode_context(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
     d = df[(df.cell == "c2_decode_context") & df.decode_ok]
-    rows, out = [], []
+    rows, out, gaps = [], [], []
     base8 = {}
     for (m, a, ctx), gg in d[d.design_batch == 8].groupby(["model", "accelerator", "v_context_cached"]):
         base8[(m, a, int(ctx))] = gg.e_d_j_per_tok.mean()
@@ -476,17 +483,29 @@ def decode_context(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
                 flag = "regimes differ"
             elif dsg == 64 and (m, a, int(ctx)) in base8 and b["mean"] > base8[(m, a, int(ctx))]:
                 flag = "above batch-8 figure"
-            cell_e = band_str(b) if not flag else " / ".join(fmt(x) for x in sorted(e))
+            cell_e = band_str(b) if not flag else " / ".join(fmt(x) for x in sorted(e)) + " (runs differ)"
             conf = b["conf"] if not flag else "medium"
+            pw = boot.band(gg.mean_power_w, gg.pod_id)
             rows.append({"Model": MODEL_LABEL[m], "Acc.": ACC_LABEL[a], "TP": tp, "Design target B": int(dsg), "Target as run": int(tb),
-                         "Cached context (tokens)": f"{int(ctx):,}", "Attended context (tokens)": f"{gg.L.mean():,.0f}", "Achieved B": f"{gg.B.mean():.1f}",
-                         "J per output token": cell_e, "Tokens per second": fmt(gg.tokens_per_s.mean(), 3), "Pods": b["pods"],
-                         "Collapse": flag or "no", "Conf.": conf})
+                         "Achieved B": f"{gg.B.mean():.1f}", "Cached context (tokens)": f"{int(ctx):,}", "Attended context (tokens)": f"{gg.L.mean():,.0f}",
+                         "Board W": band_str(pw, 3), "% of rated": f"{pw['mean'] / (RATED_W[a] * tp):.0%}",
+                         "Tokens per second": fmt(gg.tokens_per_s.mean(), 3), "J per output token": cell_e, "Pods": b["pods"], "Conf.": conf})
+            if not flag:
+                gaps.append((pw["mean"], gg.tokens_per_s.mean(), b["mean"]))
             out.append(dict(model=m, accelerator=a, tp=tp, target_batch=int(dsg), target_as_run=int(tb), context=int(ctx), L=gg.L.mean(), B=gg.B.mean(),
                             flag=flag, **{f"e_{k}": v for k, v in b.items()}, e_runs=sorted(e.tolist()), tokens_per_s=gg.tokens_per_s.mean()))
+    flagged_note = (" A configuration whose two runs differ by more than 1.5 times, or whose design batch of 64 cost more per token than its batch-8 twin,"
+                    " lists its two runs instead of a mean, marked 'runs differ'."
+                    if any(str(r["J per output token"]).endswith("(runs differ)") for r in rows) else "")
     write_table("decode_context", pd.DataFrame(rows),
-                "Energy per output token of the decode workload against attended context (experiment c2: 200 fresh input tokens, 256 output tokens; gross board energy including the idle draw). The cached context is the warmed prefix; the attended context adds the fresh input and half the output. Design target B is the grid point (8 or 64); target as run is what the feasibility rule resized it to where the KV cache could not hold 64 requests at that context. Collapse: 'regimes differ' marks a configuration whose two runs differ by more than 1.5 times, 'above batch-8 figure' a batch-64 configuration that cost more per token than its batch-8 twin (Section 4.10); flagged rows list the two runs separately instead of a mean. Brackets: the range over the two pods (one pod: the range of the repeats). Tokens per second: mean over runs, no band.",
-                "tab:decode_context", col_fmt="llrrrrrrlrrll", longtable=True)
+                "Energy per output token of the decode workload against attended context (experiment c2: 200 fresh input tokens, 256 output tokens; gross board energy including the idle draw). "
+                "The cached context is the warmed prefix; the attended context adds the fresh input and half the output. "
+                "Design target B is the grid point (8 or 64); target as run is what the feasibility rule resized it to where the KV cache could not hold 64 requests at that context; "
+                "achieved B is the server's mean count of running requests. Board W and \\% of rated as in Table \\ref{tab:decode_batch}. "
+                f"J per output token equals Board W divided by tokens per second to within {math.ceil(100 * quotient_gap(gaps))}\\%; "
+                "the small difference arises because each column is a mean over runs. Brackets: the range over the two pods (one pod: the range of the repeats). "
+                "Tokens per second: mean over runs, no band." + flagged_note,
+                "tab:decode_context", col_fmt="llrrrrrrlrrlrl", longtable=True)
     o = pd.DataFrame(out)
     hl = {}
     for (m, a, tb), g in o.groupby(["model", "accelerator", "target_batch"]):
@@ -505,21 +524,22 @@ def decode_context(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
 
 def prefill(df: pd.DataFrame, boot: Bands, head: dict) -> pd.DataFrame:
     d = df[(df.cell == "c3_prefill_miss") & df.usable & df.e_p_j_per_tok.notna()]
-    rows, out = [], []
+    rows, out, gaps = [], [], []
     for (m, a, tp), g in d.groupby(["model", "accelerator", "tp"]):
         for (tb, fi), gg in g.groupby(["v_target_batch", "v_fresh_in"]):
             b = boot.band(gg.e_p_j_per_tok, gg.pod_id)
             tps = gg.prompt_tokens.sum() / gg.duration_s.sum()
             pw = boot.band(gg.mean_power_w, gg.pod_id)
             rows.append({"Model": MODEL_LABEL[m], "Acc.": ACC_LABEL[a], "TP": tp, "Target B": int(tb),
-                         "Prompt tokens": f"{int(fi):,}", "J per prompt token": band_str(b), "Prompt tokens per second": f"{tps:,.0f}",
-                         "Board W": band_str(pw, 3), "% of rated": f"{pw['mean'] / (RATED_W[a] * tp):.0%}",
+                         "Prompt tokens": f"{int(fi):,}", "Board W": band_str(pw, 3), "% of rated": f"{pw['mean'] / (RATED_W[a] * tp):.0%}",
+                         "Prompt tokens per second": f"{tps:,.0f}", "J per prompt token": band_str(b),
                          "Pods": b["pods"], "Conf.": b["conf"]})
+            gaps.append((pw["mean"], tps, b["mean"]))
             out.append(dict(model=m, accelerator=a, tp=tp, target_batch=int(tb), fresh_in=int(fi), **{f"e_{k}": v for k, v in b.items()},
                             prompt_tps=tps, power_w=pw["mean"], rated_share=pw["mean"] / (RATED_W[a] * tp)))
     write_table("prefill", pd.DataFrame(rows),
-                "Prefill energy per prompt token with prefix caching off (experiment c3: prefix caching off, one output token; gross board energy including the idle draw). Prompt length is the fresh input; the native-maximum point is the model's context window less a margin, run at 31,200 and 32,511 tokens for the 32k models as the margin rule was tightened. Prompt tokens per second: the runs' prompt tokens over their window lengths, pooled, no band. Board W and \\% of rated as in Table \\ref{tab:decode_batch}. Brackets: the range over the two pods.",
-                "tab:prefill", col_fmt="llrrrlrlrrl", longtable=True)
+                f"Prefill energy per prompt token with prefix caching off (experiment c3: prefix caching off, one output token; gross board energy including the idle draw). Prompt length is the fresh input; the native-maximum point is the model's context window less a margin, run at 31,200 and 32,511 tokens for the 32k models as the margin rule was tightened. Prompt tokens per second: the runs' prompt tokens over their window lengths, pooled, no band. Board W and \\% of rated as in Table \\ref{{tab:decode_batch}}. For each run, J per prompt token equals board power divided by prompt tokens per second. The columns are averages over runs, so where the two pods differ widely (short prompts on B200) the quotient of the printed averages differs from the printed J per prompt token by up to {round(100 * quotient_gap(gaps)):.0f}\\%. Brackets: the range over the two pods.",
+                "tab:prefill", col_fmt="llrrrlrrlrl", longtable=True)
     o = pd.DataFrame(out)
     hl = {}
     for (m, a), g in o.groupby(["model", "accelerator"]):
@@ -800,7 +820,7 @@ def idle_share(df: pd.DataFrame, head: dict) -> None:
     rows = [{"Accelerator": ACC_LABEL[r.accelerator], "Target B": int(r.v_target_batch), "Idle share of board power, median": f"{r['median']:.0%}",
              "min to max": f"{r['min']:.0%} to {r['max']:.0%}"} for _, r in t.iterrows()]
     write_table("idle_share", pd.DataFrame(rows),
-                "Share of the decode window's mean board power that the pod drew while idle with the model loaded (the idle windows bracketing each run of experiment c1, 1k cached context). Gross energy per token includes this share. Median, minimum and maximum over the runs of all four models at that target batch; no band, as the quantity is a ratio of two means of the same run.",
+                "Idle share of decode power in the batch experiment (c1: 1k cached context, 200 fresh input and 256 output tokens). For each run, the board power the pod drew while idle with the model loaded, the mean of the 60 s idle windows before and after the run, divided by the mean board power of its decode window. Gross energy per token includes this share. Median, minimum and maximum over the runs of all four models at each target batch. No band, because each value is a ratio of two means from the same run.",
                 "tab:idle_share", col_fmt="lrll")
     head["idle_share"] = {f"{r.accelerator}/B{int(r.v_target_batch)}": [float(r['median']), float(r['min']), float(r['max'])] for _, r in t.iterrows()}
     head["idle_share_summary"] = {"median_range": [float(t["median"].min()), float(t["median"].max())],
@@ -917,29 +937,34 @@ def fig_prefill(df: pd.DataFrame, o: pd.DataFrame):
 
 
 def fig_cached(o: pd.DataFrame):
+    """Cached over uncached energy per request against the cached prefix length (log scale): columns are the
+    GPUs, rows the fresh suffix; one colour per model, dashed for one request at a time, solid for eight."""
     plt = _style()
-    fig, axes = plt.subplots(1, 2, figsize=(7.0, 3.0), sharey=True)
-    shapes = [(1024, 200), (1024, 2048), (4096, 200), (4096, 2048), (16384, 200), (16384, 2048)]
-    labels = [f"{p // 1024}k\n+{f}" for p, f in shapes]
-    for ax, acc in zip(axes, ["h100", "b200"]):
-        for i, m in enumerate(MODEL_ORDER):
-            for tb, mk in ((1, "o"), (8, "s")):
-                g = o[(o.model == m) & (o.accelerator == acc) & (o.target_batch == tb)]
-                xs, ys, los, his = [], [], [], []
-                for j, (p, f) in enumerate(shapes):
-                    r = g[(g.prefix_cached == p) & (g.fresh_in == f)]
-                    if len(r):
-                        xs.append(j + (i - 1.5) * 0.17 + (0.04 if tb == 8 else -0.04)); ys.append(r.r_mean.iloc[0])
-                        los.append(r.r_mean.iloc[0] - r.r_lo.iloc[0]); his.append(r.r_hi.iloc[0] - r.r_mean.iloc[0])
-                ax.errorbar(xs, ys, yerr=[los, his], fmt=mk, ms=3.6, color=COLOR[m], ecolor=COLOR[m], elinewidth=0.9, capsize=1.5,
-                            mfc=COLOR[m] if tb == 8 else "white", label=f"{MODEL_LABEL[m]}, B{tb}" if acc == "h100" else None)
-        ax.axhline(1.0, color="#8a8a86", lw=0.8, ls=":")
-        ax.set_xticks(range(len(shapes))); ax.set_xticklabels(labels, fontsize=7.5)
-        ax.set_xlabel("Cached prefix + fresh suffix (tokens)")
-        ax.set_title(ACC_LABEL[acc])
-    axes[0].set_ylabel("Energy per request, cached / uncached")
-    fig.legend(frameon=False, ncol=4, fontsize=7, loc="lower center", bbox_to_anchor=(0.5, -0.22))
-    fig.text(0.5, -0.29, "Open markers: one request at a time. Filled: eight concurrent. Bars: range over pods. 200 output tokens on both sides.",
+    fig, axes = plt.subplots(2, 2, figsize=(7.0, 5.0), sharex=True, sharey=True)
+    prefixes = [1024, 4096, 16384]
+    for r_i, fresh in enumerate([200, 2048]):
+        for c_i, acc in enumerate(["h100", "b200"]):
+            ax = axes[r_i][c_i]
+            for i, m in enumerate(MODEL_ORDER):
+                for tb, ls in ((1, "--"), (8, "-")):
+                    g = o[(o.model == m) & (o.accelerator == acc) & (o.target_batch == tb) & (o.fresh_in == fresh)].sort_values("prefix_cached")
+                    if not len(g):
+                        continue
+                    xs = g.prefix_cached * (1 + (i - 1.5) * 0.025)   # small offsets so the bars do not overlap
+                    ax.errorbar(xs, g.r_mean, yerr=[g.r_mean - g.r_lo, g.r_hi - g.r_mean], ls=ls, lw=1.3, marker=MARKER[m], ms=3.5,
+                                color=COLOR[m], ecolor=COLOR[m], elinewidth=0.8, capsize=1.5,
+                                label=f"{MODEL_LABEL[m]}, {'one at a time' if tb == 1 else 'eight concurrent'}" if (r_i, c_i) == (0, 0) else None)
+            ax.axhline(1.0, color="#8a8a86", lw=0.8, ls=":")
+            ax.set_xscale("log", base=2)
+            ax.set_xticks(prefixes); ax.set_xticklabels(["1k", "4k", "16k"])
+            ax.minorticks_off()
+            ax.set_title(f"{ACC_LABEL[acc]}, {fresh:,} fresh tokens", fontsize=9)
+            if r_i == 1:
+                ax.set_xlabel("Cached prefix (tokens)")
+            if c_i == 0:
+                ax.set_ylabel("Energy per request,\ncached / uncached")
+    fig.legend(frameon=False, ncol=4, fontsize=6.6, loc="lower center", bbox_to_anchor=(0.5, -0.09))
+    fig.text(0.5, -0.13, "Dashed: one request at a time. Solid: eight concurrent. Bars: range over pods. 200 output tokens on both sides.",
              ha="center", fontsize=7.2, color="#4a4a47")
     _save(fig, "fig4_cached_prefix")
     plt.close(fig)
@@ -976,7 +1001,7 @@ def roofline(df: pd.DataFrame, o1: pd.DataFrame, head: dict) -> None:
                      "Idle share of board power": f"{idle:.0%}"})
         hl[f"{m}/{a}"] = {"weight_bytes": w, "bound_tps": bound, "tps": tps, "share": tps / bound, "idle_share": idle}
     write_table("roofline", pd.DataFrame(rows),
-                "Memory-bandwidth bound at one request at a time (experiment c1, target batch 1). Each output token needs one read of the weights the step uses, so the token rate cannot exceed the GPUs' HBM bandwidth (3.35 TB/s per H100, 8 TB/s per B200, NVIDIA's figures) divided by those bytes: the dense models' fp8 weights, or for the MoE models the expert and shared weights the batch touched (measured in the router pass). The bound ignores the KV cache and the fresh-input prefill, so it is generous and the share is a lower bound on how fully the bandwidth was used. Measured: mean over the two runs. Idle share: the loaded-idle draw over the window's mean board power.",
+                "How close the GPUs came to their speed limit at one request at a time (experiment c1, target batch 1). To write each output token, a GPU must read from memory every weight that the step uses, so its token rate cannot exceed its memory bandwidth divided by the bytes read. Weight bytes per step: all the weights for the dense models, and for the MoE models the shared weights plus the experts one token uses. Bound: the GPUs' combined memory bandwidth (NVIDIA's figures: 3.35 TB/s per H100, 8 TB/s per B200) divided by those bytes. Measured: tokens per second, mean over the two runs. Share of bound: measured over bound. The bound leaves out reading the KV cache and processing the fresh input, so the true limit is lower and the share understates how fully the bandwidth was used. Idle share: the board power drawn while idle with the model loaded, from the idle windows bracketing each run, over the mean board power of the decode window.",
                 "tab:roofline", col_fmt="llrrrrrr")
     head["roofline"] = hl
     head["roofline_summary"] = {"share_range": [min(v["share"] for v in hl.values()), max(v["share"] for v in hl.values())],
