@@ -20,8 +20,8 @@ Known items before release:
 ## Version 1.0.1 (corrections)
 
 1. Review the redline (`tools/redline_docx.py` output) and merge the pull request.
-2. On Zenodo, open record 10.5281/zenodo.24014980, choose "New version", reserve the new version DOI, and put it in the paper's `\thanks` and Section 6 (the concept DOI 10.5281/zenodo.24014979 keeps resolving to the latest version).
-3. `make tables`, `make latency STORE=<raw store>`, `make pdf`; confirm the committed tables match.
+2. Done 13 Nov 2026: doi:10.5281/zenodo.24201206 reserved. On Zenodo, open record 10.5281/zenodo.24014980, choose "New version", reserve the new version DOI, and put it in the paper's `\thanks` and Section 6 (the concept DOI 10.5281/zenodo.24014979 keeps resolving to the latest version).
+3. `make tables`, `make latency STORE=<raw store>`, `make pdf`; confirm the committed tables match. Pass `PY=` the Python environment built from `requirements.txt` (matplotlib 3.11.2): another matplotlib version redraws the figures a few pixels different in size, and the last digit of one headline value can move. Done 13 Nov 2026: tables, latency table and figures identical to the committed ones; counter check reproduces the median absolute difference of 0.078 %.
 4. Tag `v1.0.1`; build the deposit with `tools/build_deposit.py` at the tag: `corpus.tar.gz` (now with `cache_reuse.csv`), `code.tar.gz` and `SHA256SUMS` change; `raw.tar.gz` is unchanged and can be kept from the first version.
 5. Upload the new PDF (`MeasuredEnergyperTokenFourOpenLanguageModels.pdf`) and the changed archives to the new Zenodo version; publish; attach the PDF to a GitHub release at the tag.
 6. arXiv: once the submission is announced, replace it with the 1.0.1 source bundle (`make arxiv`).

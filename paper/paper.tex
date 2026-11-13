@@ -26,10 +26,10 @@
 \graphicspath{{figs/}}
 \hypersetup{pdftitle={Measured Energy per Token for Four Open Language Models on NVIDIA H100 and B200: Batch, Context, Precision, Tensor Parallelism and Prefix Caching},
   pdfauthor={James Manktelow}, pdfkeywords={LLM inference, energy measurement, GPU, H100, B200, vLLM, KV cache, batching}}
-% Release identifiers: Zenodo DOI 10.5281/zenodo.24014980 (reserved 6 Nov 2026) in \thanks below and in Section 6.
+% Release identifiers: Zenodo DOI 10.5281/zenodo.24201206 (version 1.0.1, reserved 13 Nov 2026; version 1.0.0 was 10.5281/zenodo.24014980) in \thanks below and in Section 6.
 
 \title{Measured Energy per Token for Four Open Language Models on NVIDIA H100 and B200,\\Analyzed by Batch, Context, Precision, Tensor Parallelism and Prefix Caching}
-\author{James Manktelow\thanks{Version 1.0.1 (November 2026); the repository's changelog lists its corrections to version 1.0.0. Corpus, harness and analysis code: Zenodo, \href{https://doi.org/10.5281/zenodo.24014980}{doi:10.5281/zenodo.24014980}, and \url{https://github.com/InferenceCarbon/measured-energy-per-token}.}\\InferenceCarbon Ltd\\\small ORCID 0009-0003-6822-8300 \quad james.manktelow@inferencecarbon.ai}
+\author{James Manktelow\thanks{Version 1.0.1 (November 2026); the repository's changelog lists its corrections to version 1.0.0. Corpus, harness and analysis code: Zenodo, \href{https://doi.org/10.5281/zenodo.24201206}{doi:10.5281/zenodo.24201206}, and \url{https://github.com/InferenceCarbon/measured-energy-per-token}.}\\InferenceCarbon Ltd\\\small ORCID 0009-0003-6822-8300 \quad james.manktelow@inferencecarbon.ai}
 \date{}
 
 \begin{document}
@@ -339,7 +339,7 @@ Eight things limit how far these figures travel.
 \section{Data and code availability}
 
 \begin{sloppypar}
-The corpus, the metering harness and the analysis script are deposited together on Zenodo (\href{https://doi.org/10.5281/zenodo.24014980}{doi:10.5281/\allowbreak zenodo.24014980}), and the code is maintained in the repository~\citep{harness2026}. The deposit holds:
+The corpus, the metering harness and the analysis script are deposited together on Zenodo (\href{https://doi.org/10.5281/zenodo.24201206}{doi:10.5281/\allowbreak zenodo.24201206}), and the code is maintained in the repository~\citep{harness2026}. The deposit holds:
 \begin{itemize}
 \item the corpus (\texttt{features.parquet}, one row per run, with the per-GPU window records and the raw power samples beside it) and its checksum;
 \item the harness and analysis code at the commit that produced this paper;
