@@ -40,7 +40,11 @@ def main() -> None:
                 continue
             ttft = []
             for _, r in gg.iterrows():
-                for c in a.store.glob(f"*/cells/{r.run_id}"):
+                # v1.0.1: one copy per run. A run can sit on a shared campaign branch and on its pod's own results
+                # branch; v1.0.0 pooled both copies, doubling the request counts of 21 of the 40 rows. Where the
+                # copies differ (one run does), the copy whose completion tokens match the corpus row is the one used.
+                copies = []
+                for c in sorted(a.store.glob(f"*/cells/{r.run_id}")):
                     try:
                         if json.loads((c / "cell.json").read_text())["pod"]["pod_id"] != r.pod_id:
                             continue
@@ -48,7 +52,9 @@ def main() -> None:
                         continue
                     rq = pd.read_parquet(c / "requests.parquet")
                     rq = rq[(rq.in_window == True) & (rq.error.isna())]  # noqa: E712
-                    ttft.append(rq.ttft_s.dropna())
+                    copies.append((abs(float(rq.completion_tokens.fillna(0).sum()) - float(r.completion_tokens)), str(c), rq.ttft_s.dropna()))
+                if copies:
+                    ttft.append(min(copies)[2])
             if not ttft:
                 sys.exit(f"no request records found for {m}/{acc}/target {tb}")
             t = pd.concat(ttft)
@@ -59,7 +65,7 @@ def main() -> None:
                          "Interval between output tokens (ms)": f"{1000 * itl:.1f}", "Requests": int(len(t))})
             hl[f"{m}/{acc}/{tb}"] = {"ttft_median_s": float(t.median()), "ttft_p90_s": float(t.quantile(0.9)), "itl_s": itl, "B": B}
     build.write_table("latency", pd.DataFrame(rows),
-                      "Latency against batch (experiment c1, the runs of Table~\\ref{tab:decode_batch}). Time to first token is measured by the client from sending a request to its first streamed token, pooled over the two runs' in-window requests; at a target of 256 it includes waiting for one of the client's 100 connections and for a server slot, so it is a queueing time, not the server's prefill time. The interval between a request's output tokens is the achieved batch over the window's token rate, from the corpus, so it is a mean over the window rather than a per-request measurement.",
+                      "Latency against batch (experiment c1, the runs of Table~\\ref{tab:decode_batch}). Time to first token is measured by the client from sending a request to its first streamed token, pooled over the two runs' in-window requests (one copy of each run); at a target of 256 it includes waiting for one of the client's 100 connections and for a server slot, so it is a queueing time, not the server's prefill time. The interval between a request's output tokens is the achieved batch over the window's token rate, from the corpus, so it is a mean over the window rather than a per-request measurement.",
                       "tab:latency", col_fmt="llrrrrrr", longtable=True)
     summ = {}
     for tb in TARGETS:

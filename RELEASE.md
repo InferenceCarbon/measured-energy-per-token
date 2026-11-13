@@ -16,3 +16,12 @@ The order follows the publication strategy: the repository, the DOI and the prep
 Known items before release:
 - Fix the simulated-agent cache-miss fault in the harness used for future campaigns (the original lives in `inferencecarbon-meter`). This repository keeps the code as it ran.
 - arXiv compiles with pdflatex. The bundle has been checked with tectonic only.
+
+## Version 1.0.1 (corrections)
+
+1. Review the redline (`tools/redline_docx.py` output) and merge the pull request.
+2. On Zenodo, open record 10.5281/zenodo.24014980, choose "New version", reserve the new version DOI, and put it in the paper's `\thanks` and Section 6 (the concept DOI 10.5281/zenodo.24014979 keeps resolving to the latest version).
+3. `make tables`, `make latency STORE=<raw store>`, `make pdf`; confirm the committed tables match.
+4. Tag `v1.0.1`; build the deposit with `tools/build_deposit.py` at the tag: `corpus.tar.gz` (now with `cache_reuse.csv`), `code.tar.gz` and `SHA256SUMS` change; `raw.tar.gz` is unchanged and can be kept from the first version.
+5. Upload the new PDF (`MeasuredEnergyperTokenFourOpenLanguageModels.pdf`) and the changed archives to the new Zenodo version; publish; attach the PDF to a GitHub release at the tag.
+6. arXiv: once the submission is announced, replace it with the 1.0.1 source bundle (`make arxiv`).

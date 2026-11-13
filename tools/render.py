@@ -152,6 +152,7 @@ def tex_to_md(tex: str) -> str:
     in_table = False; table_rows: list[list[str]] = []; table_caption = ""; table_label = ""
 
     def inline(s: str) -> str:
+        s = s.replace("\\allowbreak ", "").replace("\\allowbreak", "").replace("\\noindent", "").replace("\\textcopyright{}", "©")
         s = re.sub(r"\\textbf\{(.*?)\}", r"**\1**", s)
         s = re.sub(r"\\emph\{(.*?)\}", r"*\1*", s)
         s = re.sub(r"\\texttt\{(.*?)\}", r"`\1`", s)
@@ -254,8 +255,8 @@ def tex_to_md(tex: str) -> str:
             out += [f"**Table {labels.get(cap.group(2), tn)}.** {inline(cap.group(1))}", ""]
             out += md_table(rows, inline) + [""]
             continue
-        if ln.startswith("\\begin{small}") or ln.startswith("\\end{small}"):
-            continue
+        if ln.startswith(("\\begin{small}", "\\end{small}", "\\begin{sloppypar}", "\\end{sloppypar}")):
+            continue  # layout-only environments: pandoc would treat a raw LaTeX block as its own and drop the text inside
         if ln.startswith("\\begin{tabular}"):
             rows = []
             while not lines[i].startswith("\\end{tabular}"):
@@ -280,6 +281,7 @@ def tex_to_md(tex: str) -> str:
             out.append("")
             continue
         if ln.startswith("\\begin{itemize}") or ln.startswith("\\end{itemize}"):
+            out.append("")  # a Markdown list needs a blank line before and after it, or pandoc runs it into the paragraph
             continue
         if ln.startswith("\\item"):
             out.append("- " + inline(ln[5:].strip())); continue

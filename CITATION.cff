@@ -4,7 +4,7 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.24014980
     description: "Zenodo deposit: corpus, raw records, harness and analysis code"
-title: "Measured Energy per Token for Four Open Language Models on NVIDIA H100 and B200: Batch, Context, Precision, Tensor Parallelism and Prefix Caching"
+title: "Measured Energy per Token for Four Open Language Models on NVIDIA H100 and B200, Analyzed by Batch, Context, Precision, Tensor Parallelism and Prefix Caching"
 type: article
 authors:
   - family-names: Manktelow
