@@ -1,0 +1,19 @@
+**Two larger models: energy per output token of the decode workload against attended context (experiment c2: 200 fresh input tokens, 256 output tokens; gross board energy including the idle draw). The cached context is the warmed prefix; the attended context adds the fresh input and half the output. Design target B is the grid point (1, 8, 32 or 64); target as run is what the feasibility rule resized it to where the KV cache could not hold that many requests at that context; achieved B is the server's mean count of running requests. Board W and \% of rated as in Table \ref{tab:decode_batch}. J per output token equals Board W divided by tokens per second to within 1\%; the small difference arises because each column is a mean over runs. Brackets: the range over the pods (one pod: the range of the repeats). Tokens per second: mean over runs, no band.**
+
+| Model | Acc. | TP | Design target B | Target as run | Achieved B | Cached context (tokens) | Attended context (tokens) | Board W | % of rated | Tokens per second | J per output token | Pods |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Llama-3.1-405B | H200 | 4 | 8 | 3 | 3.0 | 65,536 | 65,864 | 2,232 [2,228, 2,235] | 80% | 68.9 | 32.4 [32.3, 32.4] | 1 |
+| Llama-3.1-405B | H200 | 4 | 8 | 8 | 8.0 | 1,024 | 1,352 | 2,185 [2,182, 2,188] | 78% | 196 | 11.2 [11.1, 11.3] | 2 |
+| Llama-3.1-405B | H200 | 4 | 8 | 8 | 7.9 | 4,096 | 4,424 | 2,208 [2,200, 2,216] | 79% | 192 | 11.5 [11.4, 11.5] | 1 |
+| Llama-3.1-405B | H200 | 4 | 8 | 8 | 7.8 | 16,384 | 16,712 | 2,254 [2,248, 2,260] | 80% | 180 | 12.50 [12.46, 12.54] | 2 |
+| Llama-3.1-405B | H200 | 4 | 64 | 12 | 11.7 | 16,384 | 16,712 | 2,299 [2,299, 2,300] | 82% | 245 | 9.37 [9.36, 9.39] | 1 |
+| Llama-3.1-405B | H200 | 4 | 64 | 44 | 42.0 | 4,096 | 4,424 | 2,520 [2,497, 2,543] | 90% | 742 | 3.39 [3.38, 3.41] | 2 |
+| Llama-3.1-405B | H200 | 4 | 64 | 64 | 61.8 | 1,024 | 1,352 | 2,679 [2,677, 2,680] | 96% | 1,111 | 2.41 [2.4, 2.42] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 8 | 8 | 7.9 | 1,024 | 1,352 | 1,227 [1,218, 1,237] | 61% | 536 | 2.29 [2.25, 2.33] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 8 | 8 | 7.9 | 4,096 | 4,424 | 1,235 [1,232, 1,239] | 62% | 528 | 2.34 [2.33, 2.35] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 8 | 8 | 7.9 | 16,384 | 16,712 | 1,278 [1,277, 1,278] | 64% | 500 | 2.56 [2.53, 2.58] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 8 | 8 | 7.5 | 65,536 | 65,864 | 1,419 [1,416, 1,423] | 71% | 397 | 3.57 [3.55, 3.59] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 64 | 10 | 9.4 | 65,536 | 65,864 | 1,490 [1,488, 1,492] | 75% | 423 | 3.53 [3.51, 3.54] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 64 | 40 | 38.5 | 16,384 | 16,712 | 1,654 [1,649, 1,658] | 83% | 1,483 | 1.11 [1.11, 1.12] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 64 | 64 | 62.1 | 1,024 | 1,352 | 1,657 [1,656, 1,658] | 83% | 2,561 | 0.647 [0.643, 0.651] | 1 |
+| Qwen3-235B-A22B | B200 | 2 | 64 | 64 | 62.1 | 4,096 | 4,424 | 1,688 [1,686, 1,690] | 84% | 2,418 | 0.698 [0.694, 0.701] | 1 |

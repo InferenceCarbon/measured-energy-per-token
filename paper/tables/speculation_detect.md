@@ -1,0 +1,12 @@
+**What a client could see of speculative decoding on the tested server: output tokens per stream event (the output tokens the server reported for a request over the events in its stream), from the per-request records of experiment c10 (31,699 requests). Without speculation the server sent about one token per event, and with it fewer events than tokens. A single threshold on this number (1.024) labeled 93\% of requests correctly. With the threshold set on three models and tested on the fourth, it labeled 91\% on average (75\% to 98\%). The last two columns show, for each model when it was the one held out, how many of its requests the rule labeled speculative and how many plain. Held-out accuracy, with the share of the model's requests that were plain in parentheses: DeepSeek-V2-Lite 75\% (84\%), Llama-3.3-70B 98\% (52\%), Qwen3-30B-A3B 97\% (53\%), Qwen3-8B 95\% (52\%).**
+
+| Model | Server | Requests | Tokens per stream event, median over batches | range | Held out: labeled speculative | Held out: labeled plain |
+|---|---|---|---|---|---|---|
+| DeepSeek-V2-Lite | speculative | 1136 | 1.08 | 1.06 to 2.64 | 1030 | 106 |
+| DeepSeek-V2-Lite | plain | 6028 | 1.01 | 1.01 to 1.02 | 1660 | 4368 |
+| Llama-3.3-70B | speculative | 1926 | 1.13 | 1.11 to 1.18 | 1830 | 96 |
+| Llama-3.3-70B | plain | 2061 | 1 | 1 to 1 | 0 | 2061 |
+| Qwen3-30B-A3B | speculative | 4239 | 2.02 | 1.23 to 2.06 | 3956 | 283 |
+| Qwen3-30B-A3B | plain | 4722 | 1 | 1 to 1 | 0 | 4722 |
+| Qwen3-8B | speculative | 5504 | 1.36 | 1.31 to 1.47 | 4875 | 629 |
+| Qwen3-8B | plain | 6083 | 1.01 | 1 to 1.01 | 3 | 6080 |

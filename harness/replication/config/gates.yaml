@@ -1,0 +1,25 @@
+# External reference values used by pilot gates (Plan v3 §7, counter gate).
+#
+# The 8B cross-check compares our c1 pilot cell (qwen3-8b, FP8, achieved
+# batch ~16, 1k context, 256 output) with ML.ENERGY's published figure at a
+# matched batch and output length, tolerance ±25%. The figure MUST be read
+# from the leaderboard and its URL and date recorded here; a null leaves
+# the gate "not evaluated" and the pilot reports that rather than guessing.
+#
+# Units: joules per OUTPUT token, gross GPU energy, single GPU.
+#
+# Preferred source: the pilot fetches the row itself from the gated dataset
+# ml-energy/benchmark-v3 (meter/mlenergy.py) when HF_TOKEN is set on the pod
+# and the account has accepted the dataset's conditions; the fetched row is
+# stored in results/mlenergy_reference.json and overrides the figure here.
+# The cross-check cell is BF16 weights and KV, 1k context, 600 output tokens,
+# target batch 16 — chosen to match the v3 Text Conversation setting
+# (vLLM 0.11.1, BF16, mean output ~630 tokens, max_num_seqs grid).
+
+mlenergy:
+  h100:
+    qwen3-8b_j_per_output_token_b16: null
+    source: null          # e.g. https://ml.energy/leaderboard — row, date, settings
+  b200:
+    qwen3-8b_j_per_output_token_b16: null
+    source: null

@@ -1,0 +1,260 @@
+# Architecture templates — version 1, 2026-10-22.
+#
+# Every field a forward calculation needs is here, so that K(L), W, W_batch
+# and memory feasibility can be computed with no further assumption.
+# Values come from each model's published config.json; the source line
+# records where. Served precision and KV-cache precision are separate.
+#
+# roles: calibration | withheld (fifth model: never in fitting or
+#        tolerance-calibration data; blind test and transfer only)
+
+templates_version: 1
+
+models:
+
+  qwen3-8b:
+    hf_id: Qwen/Qwen3-8B-FP8
+    hf_id_bf16: Qwen/Qwen3-8B
+    # NVFP4 (ep7 alternative, B200 only): Red Hat AI llm-compressor checkpoint
+    # (compressed-tensors; vLLM detects the scheme from config). Not yet run here.
+    hf_id_nvfp4: RedHatAI/Qwen3-8B-NVFP4
+    role: calibration
+    family: qwen3
+    architecture: dense
+    attention: gqa
+    n_layers: 36
+    hidden_size: 4096
+    n_heads: 32
+    n_kv_heads: 8
+    head_dim: 128
+    n_params_total_b: 8.2
+    n_params_active_b: 8.2
+    native_context: 32768
+    weight_precisions: [fp8, bf16, nvfp4]
+    kv_precisions: [fp8, bf16]
+    gated: false
+    source: https://huggingface.co/Qwen/Qwen3-8B/blob/main/config.json
+
+  qwen3-30b-a3b:
+    hf_id: Qwen/Qwen3-30B-A3B-FP8
+    hf_id_bf16: Qwen/Qwen3-30B-A3B
+    role: calibration
+    family: qwen3
+    architecture: moe
+    attention: gqa
+    n_layers: 48
+    hidden_size: 2048
+    n_heads: 32
+    n_kv_heads: 4
+    head_dim: 128
+    n_params_total_b: 30.5
+    n_params_active_b: 3.3
+    moe:
+      n_experts: 128
+      top_k: 8
+      shared_experts: 0
+      routed_layers: 48
+      expert_intermediate: 768
+    native_context: 32768
+    weight_precisions: [fp8, bf16]
+    kv_precisions: [fp8, bf16]
+    gated: false
+    source: https://huggingface.co/Qwen/Qwen3-30B-A3B/blob/main/config.json
+
+  deepseek-v2-lite:
+    hf_id: deepseek-ai/DeepSeek-V2-Lite-Chat
+    role: calibration
+    family: deepseek
+    architecture: moe
+    attention: mla
+    n_layers: 27
+    hidden_size: 2048
+    n_heads: 16
+    # MLA: the cache holds a compressed latent per token plus a decoupled
+    # rotary key; K(L) uses these, NOT the GQA head formula.
+    mla:
+      kv_lora_rank: 512
+      qk_rope_head_dim: 64
+    n_params_total_b: 15.7
+    n_params_active_b: 2.4
+    moe:
+      n_experts: 64
+      top_k: 6
+      shared_experts: 2
+      routed_layers: 26       # first layer is dense
+      expert_intermediate: 1408
+    native_context: 32768
+    weight_precisions: [bf16, fp8]
+    kv_precisions: [bf16, fp8]
+    gated: false
+    source: https://huggingface.co/deepseek-ai/DeepSeek-V2-Lite/blob/main/config.json
+
+  llama-3.3-70b:
+    hf_id: meta-llama/Llama-3.3-70B-Instruct
+    hf_id_fp8: RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic
+    # NVFP4 (ep7, B200 only): NVIDIA's ModelOpt checkpoint, named by the vLLM recipe
+    # for Llama 3.3 70B (docs.vllm.ai/projects/recipes, Blackwell path). Gated like
+    # the base model (HF_TOKEN with the Llama licence accepted). Not yet run here.
+    hf_id_nvfp4: nvidia/Llama-3.3-70B-Instruct-FP4
+    role: calibration
+    family: llama3
+    architecture: dense
+    attention: gqa
+    n_layers: 80
+    hidden_size: 8192
+    n_heads: 64
+    n_kv_heads: 8
+    head_dim: 128
+    n_params_total_b: 70.6
+    n_params_active_b: 70.6
+    native_context: 131072
+    weight_precisions: [fp8, bf16, nvfp4]
+    kv_precisions: [fp8, bf16]
+    gated: true
+    min_gpus: {h100: 2, b200: 1}
+    source: https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/blob/main/config.json
+
+  gemma-3-27b:
+    hf_id: google/gemma-3-27b-it
+    # In the calibration set from 9 Nov 2026: Gemma joins the Paper 1 replication runs (block H).
+    # `matrix: replication` keeps it out of the original campaign matrix (config/cells.yaml).
+    role: calibration
+    matrix: replication
+    family: gemma3
+    architecture: dense
+    attention: gqa_hybrid_local_global
+    n_layers: 62
+    hidden_size: 5376
+    n_heads: 32
+    n_kv_heads: 16
+    head_dim: 128
+    # Gemma 3 alternates local (sliding window 1024) and global attention;
+    # 5 local : 1 global. KV for local layers is bounded by the window.
+    sliding_window: 1024
+    local_global_pattern: [local, local, local, local, local, global]
+    n_params_total_b: 27.4
+    n_params_active_b: 27.4
+    native_context: 131072
+    weight_precisions: [bf16, fp8]
+    kv_precisions: [bf16, fp8]
+    gated: true
+    source: https://huggingface.co/google/gemma-3-27b-it/blob/main/config.json
+    note: >
+      Chosen as the withheld model deliberately for its hybrid attention;
+      a miss on this model is read as an architecture-coverage finding.
+
+  gpt-oss-120b:
+    # Added 9 Nov 2026 for Paper 1 replication block H: the one open model with an OpenAI architecture.
+    # Fields verified against openai/gpt-oss-120b config.json on 9 Nov 2026: 36 layers, hidden 2880,
+    # 64 heads, 8 KV heads, head_dim 64, 128 local experts, 4 per token, expert intermediate 2880,
+    # sliding_window 128 on alternating layers (layer_types sliding/full), max_position_embeddings
+    # 131072 (YaRN from 4096), quant_method mxfp4 with self_attn, router, embed_tokens and lm_head
+    # not converted. Parameter counts from the model card (116.8 B total, 5.1 B active).
+    hf_id: openai/gpt-oss-120b
+    role: calibration
+    matrix: replication         # replication campaign only (config/replication_cells.yaml)
+    estimator_support: false
+    family: gpt-oss
+    architecture: moe
+    attention: gqa_hybrid_local_global
+    n_layers: 36
+    hidden_size: 2880
+    n_heads: 64
+    n_kv_heads: 8
+    head_dim: 64
+    sliding_window: 128
+    local_global_pattern: [local, global]
+    n_params_total_b: 116.8
+    n_params_active_b: 5.1
+    moe:
+      n_experts: 128
+      top_k: 4
+      shared_experts: 0
+      routed_layers: 36
+      expert_intermediate: 2880
+    native_context: 131072
+    weight_precisions: [mxfp4]
+    # vLLM 0.15.1 on H100, 9 Nov 2026 pilot (results branch repl-pilot-gptoss-h100): "Model loading took
+    # 64.38 GiB"; the KV pool was then 1.98 GiB (57,712 tokens), so B_max at 1k context was about 45.
+    # Feasibility sizes from this figure, not from the parameter count.
+    resident_gib: {mxfp4: 64.4}
+    activation_gib: 5.6         # 72 GiB budget (0.9 x 80) - 64.4 model - 1.98 KV, the same pilot
+    kv_precisions: [fp8, bf16]
+    gated: false
+    source: https://huggingface.co/openai/gpt-oss-120b/blob/main/config.json
+
+  qwen3-235b-a22b:
+    # Added 11 Nov 2026 for the Paper 1 size run (block I, config/size_cells.yaml): a large mixture-of-experts
+    # model of the Qwen3 family, 7 times the total and 7 times the active parameters of Qwen3-30B-A3B, to
+    # anchor the size axis above the 70B dense and 117B (5.1B active) models. Fields verified against the
+    # config.json and the safetensors header of Qwen/Qwen3-235B-A22B-Instruct-2507-FP8 on 11 Nov 2026: 94
+    # layers, hidden 4096, 64 heads, 4 KV heads, head_dim 128, 128 experts, 8 per token, expert intermediate
+    # 1536, max_position_embeddings 262144; 233.80 B fp8 parameters plus 1.29 B bf16; 220.2 GiB of weights.
+    # Active parameters are the model card's figure. Not yet served here: the KV pool is the template estimate.
+    hf_id: Qwen/Qwen3-235B-A22B-Instruct-2507-FP8
+    role: calibration
+    matrix: size                # config/size_cells.yaml only; out of the original and replication matrices
+    estimator_support: false
+    family: qwen3
+    architecture: moe
+    attention: gqa
+    n_layers: 94
+    hidden_size: 4096
+    n_heads: 64
+    n_kv_heads: 4
+    head_dim: 128
+    n_params_total_b: 235.1
+    n_params_active_b: 22.0
+    moe:
+      n_experts: 128
+      top_k: 8
+      shared_experts: 0
+      routed_layers: 94
+      expert_intermediate: 1536
+    native_context: 262144
+    weight_precisions: [fp8]
+    kv_precisions: [fp8, bf16]
+    gated: false
+    min_gpus: {b200: 2}
+    source: https://huggingface.co/Qwen/Qwen3-235B-A22B-Instruct-2507-FP8/blob/main/config.json
+
+  llama-3.1-405b:
+    # Added 12 Nov 2026 for the Paper 1 size run (block I, config/size_cells_llama405.yaml): the largest open
+    # dense model, 5.7 times the parameters of Llama-3.3-70B in the same family and from the same publisher's
+    # FP8-dynamic conversion, to anchor the dense size axis. Fields verified against the config.json and the
+    # safetensors header of RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8-dynamic on 12 Nov 2026: 126 layers,
+    # hidden 16384, 128 heads, 8 KV heads (head_dim 128), max_position_embeddings 131072; 401.65 B fp8
+    # parameters plus 4.21 B bf16; 381.9 GiB (410.1 GB) of weights. Not yet served here: the KV pool is the
+    # template estimate.
+    hf_id: meta-llama/Llama-3.1-405B-Instruct
+    hf_id_fp8: RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8-dynamic
+    role: calibration
+    matrix: size                # config/size_cells_llama405.yaml only
+    estimator_support: false
+    family: llama3
+    architecture: dense
+    attention: gqa
+    n_layers: 126
+    hidden_size: 16384
+    n_heads: 128
+    n_kv_heads: 8
+    head_dim: 128
+    n_params_total_b: 405.9
+    n_params_active_b: 405.9
+    native_context: 131072
+    weight_precisions: [fp8]
+    kv_precisions: [fp8, bf16]
+    gated: false                # the FP8 conversion is not gated; the bf16 original (hf_id) is, and is not downloaded
+    min_gpus: {b200: 4, h200: 4}
+    source: https://huggingface.co/RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8-dynamic/blob/main/config.json
+
+bytes_per_param:
+  fp8: 1
+  int8: 1        # compressed-tensors W8A8; no template lists it in the GPU matrix
+  nvfp4: 0.5
+  mxfp4: 0.5     # gpt-oss experts; attention, router and embeddings stay bf16 (a small share of the bytes)
+  bf16: 2
+
+bytes_per_kv_element:
+  fp8: 1
+  bf16: 2

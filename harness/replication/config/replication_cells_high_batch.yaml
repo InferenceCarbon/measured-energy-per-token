@@ -1,0 +1,66 @@
+# Paper 1 replication, block J: decode against batch BEYOND 256 concurrent requests, at 1k context.
+#
+# Why: v1.0.0 stopped near 90 achieved requests because the load generator's HTTP client opened at most 100
+# connections. The replication removed that cap and reached 170 to 240 at a target of 256, where the next cap
+# is the server's own (`--max-num-seqs 256`). Energy per output token was still falling between about 115 and
+# about 220 achieved requests, so the curve had not flattened. This block raises the server's cap to 2048 and
+# asks for 512, 1024 and 2048 (a doubling grid above the 128 and 256 already measured), to find where energy per
+# token stops falling, or turns up.
+#
+# `fixed.max_num_seqs: 2048` is a new server configuration (its key ends seqs2048), so these windows are not
+# pooled with the seqs256 windows without saying so. Targets are sized from the observed KV pool (planner
+# block): a target the pool cannot hold is resized to the pool B_max, so the top point of each model is the
+# most its cache holds at 1k context (on B200: Qwen3-8B 1339, Qwen3-30B-A3B 1748, Llama-3.3-70B 318; on H100:
+# Qwen3-8B 511, Qwen3-30B-A3B 537; DeepSeek-V2-Lite reaches 2048 on both). Llama-3.3-70B on two H100 is left out: its pool holds about 227 requests at 1k,
+# below the 256 already measured.
+#
+# The achieved batch may fall short of the target for a reason outside the GPU (one load-generator process
+# reads every response stream); the window is then a measurement at the achieved batch and carries the
+# achieved-batch note. The harness raises the open-file limit for these runs (meter.campaign.raise_fd_limit).
+#
+# 32 runs: 20 on a B200 pod with 1 GPU, 12 on an H100 pod with 1 GPU. Results branches repl-j-b200, repl-j-h100.
+matrix_version: 2
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.95
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+  - id: j_high_batch
+    block: J
+    phase: decode
+    description: Decode energy against batch beyond 256 (server cap 2048), 1k context, B200
+    vary:
+      target_batch: [512, 1024, 2048]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+      max_num_seqs: 2048
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [b200]
+
+  - id: j_high_batch
+    block: J
+    phase: decode
+    description: Decode energy against batch beyond 256 (server cap 2048), 1k context, H100 (one GPU)
+    vary:
+      target_batch: [512, 1024, 2048]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+      max_num_seqs: 2048
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite]
+    only_accelerators: [h100]

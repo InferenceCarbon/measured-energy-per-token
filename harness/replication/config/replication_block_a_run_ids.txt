@@ -1,0 +1,52 @@
+# Replication block A: the single-pod configurations of the Paper 1 corpus, one run each on a NEW pod.
+# From the replication estimate script, --list-single-pod (9 Nov 2026), minus the four early
+# Qwen3-8B agent replays with a 32,768 cap (superseded) and the eight Qwen3-8B runs at exactly 32,768
+# tokens that the server refused (Paper 1, Appendix A). Ids sized under the earlier native-max margin
+# (32,056 / 32,511) are reconstructed from the id by meter.campaign.plan; the rest regenerate.
+b200/deepseek-v2-lite/tp1/c2_decode_context/context_cached-32056_target_batch-64_weight_precision-fp8
+b200/deepseek-v2-lite/tp1/c3_prefill_miss/fresh_in-32511_target_batch-1_weight_precision-fp8
+b200/deepseek-v2-lite/tp1/c3_prefill_miss/fresh_in-32511_target_batch-8_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c7_precision/context_cached-1024_target_batch-64_weight_precision-nvfp4
+b200/llama-3.3-70b/tp1/c7_precision/context_cached-1024_target_batch-8_weight_precision-nvfp4
+b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-44_weight_precision-nvfp4
+b200/llama-3.3-70b/tp1/c7_precision/context_cached-16384_target_batch-8_weight_precision-nvfp4
+b200/llama-3.3-70b/tp1/c9_kv_pressure/context_cached-16384_target_batch-12_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9_kv_pressure/context_cached-16384_target_batch-16_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9_kv_pressure/context_cached-16384_target_batch-20_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9_kv_pressure/context_cached-16384_target_batch-24_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9_kv_pressure/context_cached-16384_target_batch-28_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9_kv_pressure/context_cached-16384_target_batch-31_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.7_target_batch-12_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.7_target_batch-20_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.7_target_batch-28_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.7_target_batch-32_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.9_target_batch-12_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.9_target_batch-20_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.9_target_batch-28_weight_precision-fp8
+b200/llama-3.3-70b/tp1/c9b_kv_pressure_diag/context_cached-16384_gpu_memory_utilization-0.9_target_batch-32_weight_precision-fp8
+b200/llama-3.3-70b/tp2/c6_tensor_parallel/target_batch-16_weight_precision-fp8
+b200/llama-3.3-70b/tp2/c6_tensor_parallel/target_batch-1_weight_precision-fp8
+b200/llama-3.3-70b/tp2/c6_tensor_parallel/target_batch-64_weight_precision-fp8
+b200/llama-3.3-70b/tp4/c6_tensor_parallel/target_batch-16_weight_precision-fp8
+b200/llama-3.3-70b/tp4/c6_tensor_parallel/target_batch-1_weight_precision-fp8
+b200/llama-3.3-70b/tp4/c6_tensor_parallel/target_batch-64_weight_precision-fp8
+b200/qwen3-8b/tp1/c7_precision/context_cached-1024_target_batch-64_weight_precision-nvfp4
+b200/qwen3-8b/tp1/c7_precision/context_cached-1024_target_batch-8_weight_precision-nvfp4
+b200/qwen3-8b/tp1/c7_precision/context_cached-16384_target_batch-64_weight_precision-nvfp4
+b200/qwen3-8b/tp1/c7_precision/context_cached-16384_target_batch-8_weight_precision-nvfp4
+b200/qwen3-8b/tp2/c6_tensor_parallel/target_batch-16_weight_precision-fp8
+b200/qwen3-8b/tp2/c6_tensor_parallel/target_batch-1_weight_precision-fp8
+b200/qwen3-8b/tp2/c6_tensor_parallel/target_batch-64_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c1_decode_batch/target_batch-256_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c2_decode_context/context_cached-16384_target_batch-64_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c2_decode_context/context_cached-30745_target_batch-64_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c2_decode_context/context_cached-32056_target_batch-64_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c2_decode_context/context_cached-32056_target_batch-8_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c3_prefill_miss/fresh_in-32511_target_batch-1_weight_precision-fp8
+h100/deepseek-v2-lite/tp1/c3_prefill_miss/fresh_in-32511_target_batch-8_weight_precision-fp8
+h100/llama-3.3-70b/tp2/c1_decode_batch/target_batch-256_weight_precision-fp8
+h100/llama-3.3-70b/tp4/c6_tensor_parallel/target_batch-16_weight_precision-fp8
+h100/llama-3.3-70b/tp4/c6_tensor_parallel/target_batch-1_weight_precision-fp8
+h100/llama-3.3-70b/tp4/c6_tensor_parallel/target_batch-64_weight_precision-fp8
+h100/qwen3-30b-a3b/tp1/c1_decode_batch/target_batch-256_weight_precision-fp8
+h100/qwen3-8b/tp1/c1_decode_batch/target_batch-256_weight_precision-fp8

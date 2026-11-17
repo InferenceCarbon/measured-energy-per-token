@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0;background:#fff}
+body{width:820px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:1.32;color:#1f2328}
+#f{padding:8px 10px 10px}
+.key{color:#57606a;margin:0 0 8px}
+h3{font-size:13.5px;margin:0 0 6px;font-weight:bold}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.c{border:1px solid #8c959f;border-radius:6px;padding:8px 11px 9px;background:#fff}
+.t{font-size:13px;font-weight:bold;display:flex;align-items:center;gap:7px}
+.x{background:#2e7d4f;color:#fff;font-size:10.5px;font-weight:bold;border-radius:9px;padding:1px 7px;white-space:nowrap}
+.d{font-style:italic;margin-top:4px}
+.r{margin-top:5px}
+.p{font-weight:bold;border-radius:9px;padding:1px 7px;white-space:nowrap}
+.L{background:#0072b2;color:#fff}
+.M{background:#a9cde6;color:#0b3a5c}
+.S{border:1px solid #8c959f;color:#57606a;padding:0 6px}
+.V{padding:0;font-weight:bold}
+.leg{border:none;padding:4px 4px}
+.leg div{margin-top:5px}
+.a{display:flex;align-items:center;justify-content:center;gap:8px;color:#57606a;margin:5px 0}
+.srv{border:1.4px dashed #8c959f;border-radius:8px;padding:8px 9px 9px;background:#f6f8fa}
+.row{display:grid;grid-template-columns:330px 1fr;gap:14px;align-items:center}
+.row .r{margin-top:0}
+</style></head><body><div id="f">
+<div class="key">J: joules at the GPU boards, idle draw included. Batch load: the number of requests the server runs at once. 1k: 1,024 tokens. Ranges cover the models and GPU types each experiment tested. Green labels: the experiments of Figure 1.</div>
+<h3>Settings chosen before any request arrives</h3>
+<div class="g3">
+<div class="c"><div class="t"><span class="x">all</span>Model</div><div class="d">Six open models of 8 to 117 billion parameters, and two larger ones as a check</div><div class="r"><span class="p V">0.9 to 15 J</span> per output token at a batch load of 1</div></div>
+<div class="c"><div class="t"><span class="x">c1</span>GPU type</div><div class="d">A newer GPU in place of the H100, on the same number of GPUs</div><div class="r"><span class="p S">1.04×, 0.94×</span> median J per output token on B200 and H200 at the same batch load: no consistent saving</div></div>
+<div class="c"><div class="t"><span class="x">c6</span>GPUs per model</div><div class="d">One model split over twice as many GPUs</div><div class="r"><span class="p S">8 to 42% more</span> J per output token, for 1.1 to 1.6 times the tokens per second</div></div>
+<div class="c"><div class="t"><span class="x">c7</span>Weight precision</div><div class="d">The model's numbers stored in 4 bits in place of 8</div><div class="r"><span class="p S">10 to 46% less</span> J per output token (two models, B200)</div></div>
+<div class="c"><div class="t"><span class="x">c10</span>Speculative decoding</div><div class="d">The server guesses several tokens ahead</div><div class="r"><span class="p S">0.70 to 8.5×</span> J per output token: no single direction, worst at a batch load of 32</div></div>
+<div class="c leg"><div style="margin-top:0;color:#57606a">Shaded values are changes in energy, shaded by their median:</div><div><span class="p L">4 times or more</span></div><div><span class="p M">1.5 to 4 times</span></div><div><span class="p S">under 1.5 times, or no single direction</span></div><div style="color:#57606a">Unshaded values are measurements.</div></div>
+</div>
+<div class="a"><svg width="12" height="18"><path d="M6 0V14M1.5 9.5L6 15L10.5 9.5" fill="none" stroke="#8c959f" stroke-width="1.6"/></svg>A request arrives: a prompt, part of which the server may have stored from an earlier request</div>
+<div class="srv">
+<div class="key" style="margin-bottom:6px">The model server: serving software with one model loaded on one to four GPUs. Only the GPU boards are metered.</div>
+<div class="g2">
+<div class="c"><div class="t"><span class="x">c3</span>1a. Read the new part of the prompt</div><div class="d">Prefill: each new token is processed once</div><div class="r"><span class="p V">0.011 to 0.27 J</span> per prompt token. At a batch load of 8 (prompts up to 16k): 11 to 35 times less than an output token</div></div>
+<div class="c"><div class="t"><span class="x">c4</span>1b. Reuse the part already seen</div><div class="d">Prefix cache: stored work is looked up, not redone</div><div class="r"><span class="p M">7 to 59% less</span> energy per request, rising from 1k to 16k tokens stored (medians)</div></div>
+</div>
+<div class="a" style="margin:3px 0"><svg width="12" height="14"><path d="M6 0V10M1.5 5.5L6 11L10.5 5.5" fill="none" stroke="#8c959f" stroke-width="1.6"/></svg></div>
+<div class="g2">
+<div class="c"><div class="t"><span class="x">c1</span>2. Write the answer</div><div class="d">Decode: the model runs once per token, and each run writes the next token for every request in the batch</div><div class="r"><span class="p L">30× less</span> median J per output token from a batch load of 1 to the highest reached (4.9 to 62×), while the wait for an answer to start rose from under 0.1 s to as much as 9 s</div></div>
+<div class="c"><div class="t"><span class="x">c2, c9, c9b</span>Stored context in GPU memory</div><div class="d">While it writes, each request keeps its prompt and answer so far in GPU memory</div><div class="r"><span class="p M">1.6×, 3.6×</span> median J per output token for a long context (up to 32k) against 1k, at batch loads of 8 and 64. <span class="p L">4 to 6×</span> if memory overflows (one model, one B200).</div></div>
+</div>
+<div class="c row" style="margin-top:8px"><div><div class="t"><span class="x">c0</span>Underneath every step: idle draw</div><div class="d">A GPU with a model loaded draws power while it waits</div></div><div class="r"><span class="p V">119 to 248 W</span> per GPU, 17 to 25% of its rated power, included in every figure here</div></div>
+</div>
+<div class="a"><svg width="12" height="18"><path d="M6 0V14M1.5 9.5L6 15L10.5 9.5" fill="none" stroke="#8c959f" stroke-width="1.6"/></svg>The answer is returned</div>
+<div class="c row"><div><div class="t"><span class="x">c8</span>If the caller is an agent, the loop repeats</div><div class="d">An agent calls the model many times and sends the whole conversation again each time</div></div><div class="r"><span class="p M">2.0 to 5.5×</span> J per output token for a simulated agent against the short-context reference workload</div></div>
+</div><script>document.title='H='+Math.ceil(document.getElementById('f').getBoundingClientRect().height)</script></body></html>

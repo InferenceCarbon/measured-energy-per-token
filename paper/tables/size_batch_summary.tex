@@ -1,0 +1,18 @@
+\newgeometry{margin=0.6in}
+\begin{landscape}
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Energy per output token at one request at a time and at the highest load each server reached (experiment c1, decode workload, 1k cached context, 256 output tokens; from Table \ref{tab:size_decode_batch}). Fold: the first over the second, as a ratio of central values. The last two columns give the lowest energy per token in the batch series and the achieved batch where it occurred; where that is not the highest load, energy per token had begun to rise again. Brackets: the range over the pods (one pod: the range of the repeats).}\label{tab:size_batch_summary}
+\begin{tabular}{llrlrrlrrrr}
+\toprule
+Model & Acc. & GPUs & \makecell[l]{One request\\at a time, J\\per token} & \makecell[r]{Highest\\load: target\\B} & achieved B & J per token & Fold & \makecell[r]{Lowest J per\\token} & \makecell[r]{at achieved\\B} & \makecell[r]{Pods at\\highest load} \\
+\midrule
+Llama-3.1-405B & H200 & 4 & 78.5 {[}78.1, 79.0{]} & 128 & 123 & 1.764 {[}1.763, 1.765{]} & 45 & 1.76 & 123 & 2 \\
+Qwen3-235B-A22B & B200 & 2 & 8.35 {[}8.34, 8.36{]} & 128 & 120 & 0.476 {[}0.475, 0.477{]} & 18 & 0.476 & 120 & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{landscape}
+\restoregeometry

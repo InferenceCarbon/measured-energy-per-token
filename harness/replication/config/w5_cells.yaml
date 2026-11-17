@@ -1,0 +1,45 @@
+# Detection tests on known endpoints (the speculation check and the precision probe of the paper).
+#
+#   python -m meter.campaign --mode campaign --dry-run --accelerator b200 --n-gpus 1 \
+#       --cells-file config/w5_cells.yaml
+#
+# Two detectors are tested here:
+#   speculation  token-arrival statistics with speculative decoding on and off. The DATA come from
+#                replication block F (config/replication_cells.yaml, cell f_speculation): every stream
+#                event's arrival time and size is already in requests.parquet. No cell here.
+#   precision    whether output distributions reveal the weight format. This file's one cell serves
+#                the same fixed prompt set to fp8 and nvfp4 weights (B200) and to fp8 on H100 (a
+#                cross-accelerator control) and keeps the top-20 logprobs of every output token.
+#                Separate pod: requesting logprobs changes the sampling path, so it never rides on
+#                the energy cells.
+
+matrix_version: 2
+
+defaults:
+  repeats: 1
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+  - id: w5_precision_probe
+    block: W5
+    phase: logprob_probe
+    description: Greedy completions with top-20 logprobs on a fixed 200-prompt set, fp8 against nvfp4
+    vary:
+      weight_precision: [fp8, nvfp4]
+    fixed:
+      n_prompts: 200
+      concurrency: 4
+      context_cached: 512
+      fresh_in: 200
+      out: 64
+      top_logprobs: 20
+    only_models: [qwen3-8b, llama-3.3-70b]
+    only_accelerators: [b200, h100]

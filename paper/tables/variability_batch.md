@@ -1,14 +1,20 @@
-**Decode variability (energy per output token) by accelerator and target batch, experiments c1 and c2, as in Table \ref{tab:cv}. The 'above 64' level is target 256 of experiment c1. The maximum is given beside the p90 because some batch levels hold as few as four configurations.**
+**Decode variability (energy per output token) by accelerator and target batch, experiments c1 and c2, as in Table \ref{tab:cv}. The maximum is given beside the p90 because some batch levels hold as few as six configurations.**
 
 | Accelerator | Target batch | Repeat difference median / p90 | Between-pod difference median / p90 | Configs | Repeat difference max |
 |---|---|---|---|---|---|
-| H100 | 1 | 1.2% / 3.1% (n=4) | 1.2% / 3.1% (n=4) | 4 | 3.8% |
-| H100 | 4 to 8 | 1.7% / 3.7% (n=20) | 1.7% / 3.7% (n=20) | 20 | 4.8% |
-| H100 | 16 | 1.6% / 6.2% (n=4) | 1.6% / 6.2% (n=4) | 4 | 7.8% |
-| H100 | 64 | 1.0% / 14.4% (n=18) | 1.2% / 14.9% (n=16) | 18 | 17.1% |
-| H100 | above 64 | 0.3% / 6.1% (n=3) | -- | 3 | 7.5% |
-| B200 | 1 | 9.3% / 11.6% (n=4) | 9.3% / 11.6% (n=4) | 4 | 12.6% |
-| B200 | 4 to 8 | 5.8% / 11.8% (n=22) | 5.8% / 11.8% (n=22) | 22 | 13.7% |
-| B200 | 16 | 2.6% / 8.5% (n=4) | 2.6% / 8.5% (n=4) | 4 | 10.1% |
-| B200 | 64 | 4.1% / 7.2% (n=19) | 4.1% / 7.2% (n=19) | 19 | 7.4% |
-| B200 | above 64 | 0.8% / 2.3% (n=4) | 0.8% / 2.3% (n=4) | 4 | 2.8% |
+| H100 | 1 | 3.8% / 6.8% (n=25) | 3.8% / 6.8% (n=25) | 25 | 7.6% |
+| H100 | 2 to 8 | 2.5% / 5.8% (n=47) | 2.5% / 5.8% (n=44) | 47 | 10.4% |
+| H100 | 9 to 32 | 2.4% / 7.0% (n=29) | 2.6% / 7.4% (n=25) | 29 | 8.4% |
+| H100 | 33 to 64 | 2.9% / 14.2% (n=19) | 3.1% / 14.9% (n=16) | 19 | 17.1% |
+| H100 | 65 to 256 | 1.6% / 3.8% (n=9) | 1.9% / 2.7% (n=6) | 9 | 7.5% |
+| H200 | 1 | 3.3% / 6.5% (n=6) | 3.3% / 6.5% (n=6) | 6 | 9.2% |
+| H200 | 2 to 8 | 4.8% / 10.2% (n=30) | 5.3% / 10.3% (n=29) | 30 | 11.7% |
+| H200 | 9 to 32 | 3.1% / 10.2% (n=8) | 6.0% / 10.4% (n=6) | 8 | 11.0% |
+| H200 | 33 to 64 | 3.4% / 8.3% (n=25) | 4.0% / 8.4% (n=24) | 25 | 9.5% |
+| H200 | 65 to 256 | 4.3% / 5.8% (n=6) | 4.3% / 5.8% (n=6) | 6 | 6.3% |
+| B200 | 1 | 3.5% / 8.2% (n=25) | 3.5% / 8.2% (n=25) | 25 | 12.6% |
+| B200 | 2 to 8 | 2.3% / 10.2% (n=51) | 2.5% / 10.2% (n=50) | 51 | 25.1% |
+| B200 | 9 to 32 | 1.5% / 4.9% (n=29) | 1.6% / 5.1% (n=27) | 29 | 10.1% |
+| B200 | 33 to 64 | 3.0% / 7.2% (n=27) | 3.0% / 7.2% (n=27) | 27 | 8.1% |
+| B200 | 65 to 256 | 1.0% / 4.0% (n=14) | 1.0% / 4.0% (n=14) | 14 | 5.7% |
+| B200 | above 256 | 2.5% / 5.1% (n=10) | -- | 10 | 5.4% |

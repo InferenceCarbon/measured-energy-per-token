@@ -1,0 +1,5 @@
+Model,Pair,"Same top token, share of positions",Identical replies,"First differing token, mean position",Mean absolute change in log-probability
+Llama-3.3-70B,"fp8 against nvfp4, both on B200",17%,0%,8.1,4.47
+Qwen3-8B,"fp8 against nvfp4, both on B200",5%,0%,1.4,6.40
+Llama-3.3-70B,fp8 on H100 against fp8 on B200 (control),24%,1%,12.5,4.37
+Qwen3-8B,fp8 on H100 against fp8 on B200 (control),34%,12%,20.6,2.21

@@ -1,0 +1,94 @@
+# Paper 1 size run (block I): one large open model on the block H core grid, to anchor the size axis.
+# Qwen3-235B-A22B (fp8, 220 GiB of weights) on a pod with 2 x B200; see the template in config/models.yaml.
+#
+# Same cell shapes as block H (static, decode against batch, decode against context, cache-miss prefill,
+# cached-prefix access with its control), under new ids so the runs form their own block. The context grid
+# stops at 64k: the model's window is 262k, and one 64k point is enough to place the long-context slope.
+# Targets are sized from the KV pool (planner block): the pool is the TEMPLATE estimate until this model has
+# been served once, so the first pod's `GPU KV cache size` should be added to config/kv_pool_observed.yaml,
+# and the harness flags any window whose cache is evicted (meter/cachecheck.py).
+#
+# 60 runs per pod (2 repeats). Results branch: repl-i-b200.
+matrix_version: 2
+matrix: size
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.95
+  use_observed_pools: false   # pinned 12 Nov 2026: the run (repl-i-b200) was planned on the template pool (724,885
+                              # tokens; the server then reported 906,000), so the plan rebuilds with the run ids as run
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, 65536]
+
+cells:
+  - id: i_size_static
+    block: I
+    phase: idle_loaded
+    description: Static power with model loaded, no requests (default clocks)
+    vary:
+      clock_mode: [default]
+    fixed: {}
+    only_models: [qwen3-235b-a22b]
+    only_accelerators: [b200]
+
+  - id: i_size_decode_batch
+    block: I
+    phase: decode
+    description: Decode energy against batch
+    vary:
+      target_batch: [1, 8, 32, 64, 128]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-235b-a22b]
+    only_accelerators: [b200]
+
+  - id: i_size_decode_context
+    block: I
+    phase: decode
+    description: Decode energy against attended context
+    vary:
+      context_cached: context_grid
+      target_batch: [8, 64]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-235b-a22b]
+    only_accelerators: [b200]
+
+  - id: i_size_prefill_miss
+    block: I
+    phase: prefill
+    description: Cache-miss prefill
+    vary:
+      fresh_in: context_grid
+      target_batch: [1, 8]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_models: [qwen3-235b-a22b]
+    only_accelerators: [b200]
+
+  - id: i_size_cached_prefix
+    block: I
+    phase: prefix_access
+    description: Cached-prefix access with matched uncached control (1k and 16k cached, 200 fresh)
+    vary:
+      prefix_cached: [1024, 16384]
+      fresh_in: [200]
+      target_batch: [1, 8]
+      control: [cached, uncached]
+    fixed:
+      out: 200
+    only_models: [qwen3-235b-a22b]
+    only_accelerators: [b200]

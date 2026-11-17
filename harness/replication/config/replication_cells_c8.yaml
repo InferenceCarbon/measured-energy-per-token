@@ -1,0 +1,54 @@
+# Paper 1 replication, block K: the simulated-agent experiment (c8) rerun on the fixed replay harness.
+#
+# Why: v1.0.0's replay perturbed the cached prefix at step 5 only, so steps 10, 15, ... reused the cache instead
+# of missing (Paper 1 v1.0.0, Appendix E; fixed in meter 46accf7, tested by
+# test_replay_every_scripted_miss_changes_the_prefix). The server counters of every v1.0.0 c8 window show it:
+# their prefix hit ratio is the faulty script's (0.791 for 11 steps, 0.928 for 30), not the intended one (0.673,
+# 0.732). No replication branch holds a c8 run, so v1.1 has no agent data from the fixed harness.
+#
+# Same cell as config/cells.yaml (30 steps from 10,240 tokens in steps of 2,048, 300 output tokens per step, a
+# scripted miss at step 1 and every fifth step; the context is capped at the model's window less 1,024, so the
+# 32k models run 11 steps with 3 misses and Llama-3.3-70B 30 steps with 7), four core models, agents alone and
+# concurrent. Concurrent targets are sized from the observed KV pool (planner block): eight agents at the final
+# step need more than the pool for Llama-3.3-70B, so it runs 4 agents on two H100 and 6 on one B200 (v1.0.0 ran
+# 5 and 7 under the old rule, at about 1.0 of the pool by the last step).
+#
+# The harness checks each window against its script (meter.cachecheck.replay_check): the server's prefix hit
+# ratio over the scripted one is recorded in cell.json (`cache_check`) and flagged below 0.8 (eviction) or
+# above 1.1 (scripted misses hitting the cache, the v1.0.0 fault).
+#
+# 16 runs per accelerator (2 repeats). Two pods per accelerator (shard 0/2 and 1/2, one repeat of each
+# configuration on each pod) or one pod with both repeats. Results branches repl-k-h100, repl-k-b200.
+matrix_version: 2
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.95
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+  - id: c8_agent_replay
+    block: K
+    phase: composite
+    description: 30-step synthetic agent (fixed replay harness); agents alone and concurrent
+    vary:
+      target_batch: [1, 8]
+    fixed:
+      steps: 30
+      context_start: 10240
+      context_step: 2048
+      out_per_step: 300
+      cache_policy: controlled
+    context_cap: native_max
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]

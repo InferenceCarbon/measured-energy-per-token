@@ -1,0 +1,70 @@
+# Block E fallback (predeclared in config/replication_cells.yaml: "memory offer 0.8, 0.7 fallback
+# if the kernels OOM"). On 10 Nov 2026 every Llama-3.3-70B NVFP4 server group of block E failed at
+# vLLM engine init with CUDA OOM at gpu_memory_utilization 0.8 on both B200 pods (logs on
+# repl-e-b200 under logs/vllm.llama-3.3-70b_tp1_nvfp4_*_gmu0.8.log); Qwen3-8B NVFP4 and Llama
+# FP8 served at 0.8. The same Llama NVFP4 checkpoint served at the catalogue default for NVFP4
+# (0.7) in the W5 probe (repl-w5-b200). This file re-runs ONLY the Llama NVFP4 cells of block E
+# at 0.7; the run ids differ from the 0.8 attempts (the offer is part of the variant), so nothing
+# in repl-e-b200 is overwritten and the freeze loader sees both. The FP8 comparator stays at 0.8.
+#
+#   python -m meter.campaign --mode campaign --dry-run --accelerator b200 --n-gpus 1 \
+#       --cells-file config/replication_cells_e_gmu07.yaml
+matrix_version: 2
+matrix: replication
+context_grid: [1024, 4096, 16384, native_max]
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+cells:
+  - id: e_nvfp4_ladder
+    block: E
+    phase: decode
+    description: fp8 against nvfp4 at five batches and two contexts (nvfp4 arm at memory offer 0.7)
+    vary:
+      weight_precision: [nvfp4]
+      target_batch: [1, 8, 32, 64, 128]
+      context_cached: [1024, 16384]
+      gpu_memory_utilization: [0.7]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_accelerators: [b200]
+    only_models: [llama-3.3-70b]
+
+  - id: e_nvfp4_prefill_miss
+    block: E
+    phase: prefill
+    description: Cache-miss prefill (c3 shape) with nvfp4 weights at memory offer 0.7
+    vary:
+      weight_precision: [nvfp4]
+      fresh_in: [1024, 4096, 16384]
+      target_batch: [1, 8]
+      gpu_memory_utilization: [0.7]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_accelerators: [b200]
+    only_models: [llama-3.3-70b]
+
+  - id: e_nvfp4_cached_prefix
+    block: E
+    phase: prefix_access
+    description: Cached-prefix access with matched uncached control (c4 shape) with nvfp4 weights at memory offer 0.7
+    vary:
+      weight_precision: [nvfp4]
+      prefix_cached: [1024, 16384]
+      fresh_in: [200]
+      target_batch: [1, 8]
+      control: [cached, uncached]
+      gpu_memory_utilization: [0.7]
+    fixed:
+      out: 200
+    only_accelerators: [b200]
+    only_models: [llama-3.3-70b]
