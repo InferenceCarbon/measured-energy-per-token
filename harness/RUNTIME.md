@@ -50,3 +50,13 @@ Between the periods the meter's code (`meter/power.py`) was restructured: the NV
 - **Message strings:** three were reworded (an option's help text, a plan label and a note). No other statement of code was changed.
 
 The code paths that would call the omitted modules remain in the shared files, and no run in the corpus takes them. The snapshot's dry-run planner (`python -m meter.campaign --mode campaign --dry-run ...`) gives the same run plans as the unedited code for the replication's settings files. The 11 earlier replication versions are described in the table above and are not rebuilt by patch.
+
+## The ML.ENERGY check (`meter/mlenergy.py`)
+
+This module belongs to a check made before the measurements. It is not a result of the paper, and no figure in the paper depends on it. The same file is in `harness/replication/meter/`.
+
+In pilot mode the harness made one extra Qwen3-8B run set up like the conversation task of the ML.ENERGY Benchmark, version 3 (16-bit weights, target batch 16, 600 output tokens). It compared the run's energy per output token with that benchmark's published figure for the same model on one H100. The module fetches the figure from the benchmark's dataset on Hugging Face (`ml-energy/benchmark-v3`), which needs an account that has accepted the dataset's conditions. The check passes if the two figures agree within 25%.
+
+Four pilots ran on 23 October 2026, the day before the first run in the corpus, each on one H100. The check was evaluated on one of them: 0.252 J per output token at an achieved batch of 15.7, against the benchmark's 0.259 J at a batch setting of 16, a difference of 2.7%. On the other three it was not evaluated: two had no reference figure, and on one the extra run did not run. It was not evaluated on H200 or B200, and no run of the replication made the check.
+
+The four pilots are not in the corpus, and their records are not in the Zenodo deposit.
