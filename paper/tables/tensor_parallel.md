@@ -1,19 +1,19 @@
-**Tensor-parallel cost: gross board energy per output token, summed over the GPUs sharing the model, at the higher tensor-parallel degree over the next lower, at matched target batch (1k cached context, 256 output tokens). Both sides are experiment c6's own runs where c6 ran that degree ('c6 / c6'); the TP1 side of Llama-3.3-70B on B200 is experiment c1's run of the same shape ('c1 / c6'). A ratio above 1 is the energy cost of splitting the model; the throughput ratio (tokens per second, higher over lower, mean over runs, no band) is what the split bought. Pairing 'pod': ratio formed within each pod, band the range over pods; 'repeat': both sides on one pod, ratio per repeat, band the range of repeats; 'none': the two sides on different pods, band from the lowest to the highest combination of the two sides' pod values.**
+**Tensor-parallel cost: gross board energy per output token, summed over the GPUs sharing the model, at the higher tensor-parallel degree over the next lower, at matched target batch (1k cached context, 256 output tokens). Both sides are experiment c6's own runs where c6 ran that degree ('c6 / c6'); the TP1 side of Llama-3.3-70B on B200 is experiment c1's run of the same shape ('c1 / c6'). A ratio above 1 is the energy cost of splitting the model; the throughput ratio (tokens per second, higher over lower, mean over runs, no band) is what the split bought. Pairing 'pod': ratio formed within each pod, band the range over pods; 'repeat': both sides on one pod, ratio per repeat, band the range of repeats; 'none': the two sides on different pods, band from the lowest to the highest combination of the two sides' bands.**
 
 | Model | Acc. | Target B | TP pair | Lower TP, J per output token | Higher TP, J per output token | Ratio | Throughput ratio | Pods higher / lower | Sides from | Pairing |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Llama-3.3-70B | B200 | 1 | 1 to 2 | 14.3 [13.4, 15.2] | 16.14 [16.13, 16.15] | 1.13 [1.06, 1.21] | 1.57 | 1 / 2 | c1 / c6 | none |
-| Llama-3.3-70B | B200 | 1 | 2 to 4 | 16.14 [16.13, 16.15] | 18.54 [18.53, 18.54] | 1.149 [1.148, 1.149] | 1.4 | 1 / 1 | c6 / c6 | none |
-| Llama-3.3-70B | B200 | 16 | 1 to 2 | 1.02 [0.964, 1.07] | 1.15 [1.14, 1.16] | 1.13 [1.07, 1.2] | 1.57 | 1 / 2 | c1 / c6 | none |
-| Llama-3.3-70B | B200 | 16 | 2 to 4 | 1.15 [1.14, 1.16] | 1.33 [1.33, 1.34] | 1.16 [1.15, 1.17] | 1.4 | 1 / 1 | c6 / c6 | none |
-| Llama-3.3-70B | B200 | 64 | 1 to 2 | 0.38 [0.368, 0.391] | 0.428 [0.427, 0.428] | 1.13 [1.09, 1.16] | 1.58 | 1 / 2 | c1 / c6 | none |
-| Llama-3.3-70B | B200 | 64 | 2 to 4 | 0.428 [0.427, 0.428] | 0.524 [0.524, 0.525] | 1.23 [1.22, 1.23] | 1.27 | 1 / 1 | c6 / c6 | none |
-| Llama-3.3-70B | H100 | 1 | 2 to 4 | 15.7 [15.1, 16.3] | 16.80 [16.79, 16.82] | 1.07 [1.03, 1.11] | 1.53 | 1 / 2 | c6 / c6 | none |
-| Llama-3.3-70B | H100 | 16 | 2 to 4 | 1.23 [1.23, 1.24] | 1.3447 [1.34468, 1.34471] | 1.09 [1.08, 1.1] | 1.51 | 1 / 2 | c6 / c6 | none |
-| Llama-3.3-70B | H100 | 64 | 2 to 4 | 0.538 [0.531, 0.545] | 0.583 [0.576, 0.59] | 1.08 [1.06, 1.11] | 1.52 | 1 / 2 | c6 / c6 | none |
-| Qwen3-8B | B200 | 1 | 1 to 2 | 2.09 [1.99, 2.2] | 2.94 [2.93, 2.94] | 1.4 [1.33, 1.48] | 1.12 | 1 / 2 | c6 / c6 | none |
-| Qwen3-8B | B200 | 16 | 1 to 2 | 0.229 [0.228, 0.23] | 0.252 [0.251, 0.254] | 1.1 [1.09, 1.11] | 1.32 | 1 / 2 | c6 / c6 | none |
-| Qwen3-8B | B200 | 64 | 1 to 2 | 0.0973 [0.0966, 0.098] | 0.104 [0.104, 0.105] | 1.07 [1.06, 1.08] | 1.42 | 1 / 2 | c6 / c6 | none |
+| Llama-3.3-70B | B200 | 1 | 1 to 2 | 14.3 [13.4, 15.2] | 16.3 [16.1, 16.7] | 1.15 [1.06, 1.25] | 1.57 | 2 / 2 | c1 / c6 | none |
+| Llama-3.3-70B | B200 | 1 | 2 to 4 | 16.3 [16.1, 16.7] | 18.9 [18.5, 19.5] | 1.15 [1.11, 1.21] | 1.41 | 2 / 2 | c6 / c6 | none |
+| Llama-3.3-70B | B200 | 16 | 1 to 2 | 1.02 [0.964, 1.07] | 1.17 [1.15, 1.21] | 1.15 [1.08, 1.26] | 1.55 | 2 / 2 | c1 / c6 | none |
+| Llama-3.3-70B | B200 | 16 | 2 to 4 | 1.17 [1.15, 1.21] | 1.38 [1.33, 1.46] | 1.18 [1.1, 1.27] | 1.39 | 2 / 2 | c6 / c6 | none |
+| Llama-3.3-70B | B200 | 64 | 1 to 2 | 0.38 [0.368, 0.391] | 0.436 [0.428, 0.453] | 1.15 [1.09, 1.23] | 1.54 | 2 / 2 | c1 / c6 | none |
+| Llama-3.3-70B | B200 | 64 | 2 to 4 | 0.436 [0.428, 0.453] | 0.538 [0.524, 0.565] | 1.23 [1.16, 1.32] | 1.27 | 2 / 2 | c6 / c6 | none |
+| Llama-3.3-70B | H100 | 1 | 2 to 4 | 15.7 [15.1, 16.3] | 16.9 [16.8, 17.1] | 1.08 [1.03, 1.13] | 1.53 | 2 / 2 | c6 / c6 | none |
+| Llama-3.3-70B | H100 | 16 | 2 to 4 | 1.23 [1.23, 1.24] | 1.35 [1.34, 1.37] | 1.1 [1.08, 1.12] | 1.52 | 2 / 2 | c6 / c6 | none |
+| Llama-3.3-70B | H100 | 64 | 2 to 4 | 0.538 [0.531, 0.545] | 0.584 [0.583, 0.586] | 1.09 [1.07, 1.11] | 1.52 | 2 / 2 | c6 / c6 | none |
+| Qwen3-8B | B200 | 1 | 1 to 2 | 2.09 [1.99, 2.2] | 2.98 [2.94, 3.07] | 1.42 [1.34, 1.54] | 1.11 | 2 / 2 | c6 / c6 | none |
+| Qwen3-8B | B200 | 16 | 1 to 2 | 0.229 [0.228, 0.23] | 0.264 [0.252, 0.288] | 1.15 [1.1, 1.26] | 1.26 | 2 / 2 | c6 / c6 | none |
+| Qwen3-8B | B200 | 64 | 1 to 2 | 0.0973 [0.0966, 0.098] | 0.114 [0.104, 0.134] | 1.17 [1.06, 1.39] | 1.24 | 2 / 2 | c6 / c6 | none |
 | Qwen3-8B | H100 | 1 | 1 to 2 | 2.61 [2.6, 2.62] | 3.58 [3.56, 3.6] | 1.371 [1.371, 1.372] | 1.31 | 2 / 2 | c6 / c6 | pod |
 | Qwen3-8B | H100 | 16 | 1 to 2 | 0.208 [0.208, 0.209] | 0.279 [0.276, 0.282] | 1.34 [1.32, 1.35] | 1.31 | 2 / 2 | c6 / c6 | pod |
 | Qwen3-8B | H100 | 64 | 1 to 2 | 0.0922 [0.0916, 0.0929] | 0.117 [0.1169, 0.1171] | 1.27 [1.26, 1.28] | 1.3 | 2 / 2 | c6 / c6 | pod |

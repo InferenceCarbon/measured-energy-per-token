@@ -1,0 +1,191 @@
+{
+ "single_by_group": [
+  {
+   "accelerator": "b200",
+   "model": "llama-3.3-70b",
+   "precision": "fp8",
+   "top1_margin_mean": 4.904296859153196,
+   "topk_entropy_mean": 0.7549251083288153,
+   "distinct_value_ratio": 0.8125,
+   "zero_fraction": 0.015625,
+   "mean_logprob": -0.38046601477587005
+  },
+  {
+   "accelerator": "b200",
+   "model": "llama-3.3-70b",
+   "precision": "nvfp4",
+   "top1_margin_mean": 4.351074204978267,
+   "topk_entropy_mean": 0.7894045440207669,
+   "distinct_value_ratio": 0.84375,
+   "zero_fraction": 0.015625,
+   "mean_logprob": -0.39651968174470714
+  },
+  {
+   "accelerator": "b200",
+   "model": "qwen3-8b",
+   "precision": "fp8",
+   "top1_margin_mean": 3.804687496599532,
+   "topk_entropy_mean": 0.9717802225011873,
+   "distinct_value_ratio": 0.890625,
+   "zero_fraction": 0.015625,
+   "mean_logprob": -0.45280340054344315
+  },
+  {
+   "accelerator": "b200",
+   "model": "qwen3-8b",
+   "precision": "nvfp4",
+   "top1_margin_mean": 4.848632797132664,
+   "topk_entropy_mean": 0.7210588838701015,
+   "distinct_value_ratio": 0.8203125,
+   "zero_fraction": 0.015625,
+   "mean_logprob": -0.3487829436604967
+  },
+  {
+   "accelerator": "h100",
+   "model": "llama-3.3-70b",
+   "precision": "fp8",
+   "top1_margin_mean": 4.792968727221787,
+   "topk_entropy_mean": 0.7365670778561959,
+   "distinct_value_ratio": 0.8125,
+   "zero_fraction": 0.015625,
+   "mean_logprob": -0.34891675326414834
+  },
+  {
+   "accelerator": "h100",
+   "model": "qwen3-8b",
+   "precision": "fp8",
+   "top1_margin_mean": 3.845703106755765,
+   "topk_entropy_mean": 0.958632649635356,
+   "distinct_value_ratio": 0.890625,
+   "zero_fraction": 0.015625,
+   "mean_logprob": -0.4458928365473475
+  }
+ ],
+ "paired": {
+  "fp8_vs_nvfp4_b200": {
+   "llama-3.3-70b": {
+    "top1_agreement": 0.169453125,
+    "text_identical": 0.0,
+    "first_divergence": 8.085,
+    "abs_delta_logprob_mean": 4.467154955283075
+   },
+   "qwen3-8b": {
+    "top1_agreement": 0.047578125,
+    "text_identical": 0.0,
+    "first_divergence": 1.435,
+    "abs_delta_logprob_mean": 6.398514325520994
+   }
+  },
+  "fp8_h100_vs_fp8_b200": {
+   "llama-3.3-70b": {
+    "top1_agreement": 0.243359375,
+    "text_identical": 0.01,
+    "first_divergence": 12.475,
+    "abs_delta_logprob_mean": 4.366670494484918
+   },
+   "qwen3-8b": {
+    "top1_agreement": 0.344375,
+    "text_identical": 0.115,
+    "first_divergence": 20.64,
+    "abs_delta_logprob_mean": 2.213201855873547
+   }
+  }
+ },
+ "detectors": {
+  "top1_margin_mean": {
+   "feature": "top1_margin_mean",
+   "n": 800,
+   "threshold_all": 3.9062499844475127,
+   "accuracy_in_sample": 0.55,
+   "leave_one_model_out": {
+    "llama-3.3-70b": {
+     "threshold": 3.90722654969319,
+     "accuracy": 0.4725,
+     "n": 400
+    },
+    "qwen3-8b": {
+     "threshold": 2.248046867914802,
+     "accuracy": 0.45,
+     "n": 400
+    }
+   },
+   "accuracy_loo_mean": 0.46125
+  },
+  "topk_entropy_mean": {
+   "feature": "topk_entropy_mean",
+   "n": 800,
+   "threshold_all": 0.6580343008404695,
+   "accuracy_in_sample": 0.54,
+   "leave_one_model_out": {
+    "llama-3.3-70b": {
+     "threshold": 1.0805354700182297,
+     "accuracy": 0.505,
+     "n": 400
+    },
+    "qwen3-8b": {
+     "threshold": 0.6580343008404695,
+     "accuracy": 0.4725,
+     "n": 400
+    }
+   },
+   "accuracy_loo_mean": 0.48875
+  },
+  "distinct_value_ratio": {
+   "feature": "distinct_value_ratio",
+   "n": 800,
+   "threshold_all": 0.921875,
+   "accuracy_in_sample": 0.565,
+   "leave_one_model_out": {
+    "llama-3.3-70b": {
+     "threshold": 0.921875,
+     "accuracy": 0.525,
+     "n": 400
+    },
+    "qwen3-8b": {
+     "threshold": 0.796875,
+     "accuracy": 0.445,
+     "n": 400
+    }
+   },
+   "accuracy_loo_mean": 0.485
+  },
+  "zero_fraction": {
+   "feature": "zero_fraction",
+   "n": 800,
+   "threshold_all": 0.171875,
+   "accuracy_in_sample": 0.54,
+   "leave_one_model_out": {
+    "llama-3.3-70b": {
+     "threshold": 0.171875,
+     "accuracy": 0.5,
+     "n": 400
+    },
+    "qwen3-8b": {
+     "threshold": -1e-09,
+     "accuracy": 0.5,
+     "n": 400
+    }
+   },
+   "accuracy_loo_mean": 0.5
+  },
+  "mean_logprob": {
+   "feature": "mean_logprob",
+   "n": 800,
+   "threshold_all": -0.44711917824589337,
+   "accuracy_in_sample": 0.61,
+   "leave_one_model_out": {
+    "llama-3.3-70b": {
+     "threshold": -0.4283066567533368,
+     "accuracy": 0.5375,
+     "n": 400
+    },
+    "qwen3-8b": {
+     "threshold": -0.4544896382857022,
+     "accuracy": 0.6125,
+     "n": 400
+    }
+   },
+   "accuracy_loo_mean": 0.575
+  }
+ }
+}

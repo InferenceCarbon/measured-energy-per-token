@@ -3,21 +3,23 @@
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\caption{The measured factors compared on one scale. Effect is the multiplier on energy per output token (per request for the cached prefix) between the two settings named in the Comparison column, as a ratio of central values: the median over the model and accelerator combinations, with the smallest and largest in parentheses. Comparisons counts those combinations (and, for the cached prefix, prompt shapes and concurrencies). Each row restates figures from the section that measures the factor; the GPU-generation row is two-sided because the direction depends on the model, and the GPU-memory row is one model (Llama-3.3-70B). Repeat-to-repeat variation is shown for scale, with its 90th percentile in place of a range.}\label{tab:factors}
+\caption{The measured factors compared on one scale. Effect is the multiplier on energy per output token (per request for the cached prefix) between the two settings named in the Comparison column, restating the ratios of the section that measures the factor (paired by pod or by repeat where both sides ran on the same pods, otherwise ratios of central values): the median over the comparisons, with the smallest and largest in parentheses. Comparisons counts them: one for each model, GPU type and tested batch or prompt shape. Each row restates figures from the section that measures the factor; the GPU-generation row is two-sided because the direction depends on the model, and the GPU-memory row is one model (Llama-3.3-70B). Repeat-to-repeat variation is shown for scale, with its 90th percentile in place of a range.}\label{tab:factors}
 \begin{tabular}{>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}p{6.0cm}lr>{\raggedright\arraybackslash}p{2.7cm}>{\raggedright\arraybackslash}p{4.9cm}}
 \toprule
 Factor & Comparison & \makecell[l]{Effect, median\\(range)} & \makecell[r]{Compar-\\isons} & \makecell[l]{Per\\doubling} & What the data tell us \\
 \midrule
-Batch & one request at a time over the deepest batch & 20.7 (13.6 to 42.3) & 8 & 1.63 (1.49 to 1.78) & the dominant lever on every model and both GPUs \\
-Cached prefix & fresh request over one with 16k tokens already cached & 2.54 (1.5 to 6.06) & 32 & -- & large for long reused prompts, small (median 9\%) at 1k \\
-Memory limit for stored context & past the limit over just below it (Llama-3.3-70B, one B200) & 4.29 (4.11 to 5.84) & 5 & -- & a cliff, not a slope: admission limits and memory headroom reduce the risk, but the safe point depends on the workload and the scheduler \\
-Context length, batch 64 & longest context whose runs kept their cache (4k for Llama-3.3-70B on H100, 16k on B200, 31k to 32k for the others) over 1k, design batch 64; long context forced a smaller batch on some servers & 3.19 (1.29 to 9.79) & 8 & 1.30 (1.14 to 1.58) & rises with context and more steeply at deep batch, where the stored context fills memory \\
-Context length, batch 8 & longest context (16k to 32k) over 1k, design batch 8 & 1.67 (1.26 to 2.69) & 8 & 1.11 (1.06 to 1.22) & a moderate, steady rise \\
-GPU generation, same GPU count & B200 over H100 on the same number of GPUs, at the same batch & 0.929 (0.753 to 2.7) & 24 & -- & no consistent saving: lower for some models, higher for DeepSeek-V2-Lite \\
-One B200 against two H100s & one B200 over the two H100s Llama-3.3-70B needs, at the same batch; changes GPU generation and GPU count together, and at the highest load also the cache reuse & 0.855 (0.702 to 0.927) & 4 & -- & a saving because the larger memory holds the model on fewer GPUs \\
-Weight precision & 8-bit over 4-bit weights, B200 (one pod per model) & 1.35 (1.16 to 1.64) & 7 & -- & a modest saving in the tested 4-bit deployments; one pod, so indicative \\
-Tensor parallelism & a model split over more GPUs over fewer & 1.13 (1.07 to 1.4) & 15 & -- & costs energy; buys throughput \\
-Repeat-to-repeat variation & the larger over the smaller of two repeats & 1.02 (90th percentile 1.09) & 154 & -- & small against most of the levers above, though not against the smallest \\
+Batch & one request at a time over the highest load reached & 29.7 (4.87 to 62.2) & 18 & 1.53 (1.36 to 1.75) & the dominant lever on every model and all three GPUs \\
+Cached prefix & fresh request over one with 16k tokens already cached & 2.45 (1.5 to 6.37) & 52 & -- & large for long reused prompts, small (median 7\%) at 1k \\
+Memory limit for stored context & past the limit over just below it on the same pod (Llama-3.3-70B, one B200) & 4.24 (3.7 to 5.84) & 9 & -- & a cliff, not a slope: admission limits and memory headroom reduce the risk, but the safe point depends on the workload and the scheduler \\
+Context length, batch 64 & longest context up to 32k whose runs kept their cache over 1k, design batch 64; long context forced a smaller batch on some servers; configurations marked `runs differ' in Table 14 left out & 3.55 (1.29 to 9.79) & 16 & 1.33 (1.07 to 1.58) & rises with context and more steeply at deep batch, where the stored context fills memory \\
+Context length, batch 8 & longest context up to 32k over 1k, design batch 8; configurations marked `runs differ' in Table 14 left out & 1.59 (1.13 to 2.69) & 18 & 1.10 (1.03 to 1.26) & a moderate, steady rise \\
+GPU generation, same GPU count & B200 over H100 on the same number of GPUs, at the same batch & 1.04 (0.753 to 2.7) & 41 & -- & no consistent saving: lower for some models, higher for others \\
+H200 against H100, same GPU count & H200 over H100 on the same number of GPUs, at the same batch & 0.944 (0.893 to 1.41) & 21 & -- & close to 1: the two share a design, and the H200 adds memory \\
+One larger GPU against two H100s & one B200 or one H200 over the two H100s Llama-3.3-70B needs, at the same batch; changes GPU type and GPU count together & 0.823 (0.702 to 0.927) & 13 & -- & a saving, part of it from holding the model on fewer GPUs \\
+Weight precision & 8-bit over 4-bit weights, B200 & 1.34 (1.11 to 1.85) & 25 & -- & a saving in the tested 4-bit deployments; third-party 4-bit models, so indicative \\
+Speculative decoding & n-gram speculation of three tokens over the plain server & 1.02 (0.698 to 8.5) & 24 & -- & at one request at a time 0.698 to 1.71; at batch 32 0.821 to 8.5: it helped a lone request on most models and cost energy under load \\
+Tensor parallelism & a model split over more GPUs over fewer & 1.15 (1.08 to 1.42) & 15 & -- & costs energy; buys throughput \\
+Repeat-to-repeat variation & the larger over the smaller of two repeats & 1.03 (90th percentile 1.1) & 503 & -- & small against most of the levers above, though not against the smallest \\
 \bottomrule
 \end{tabular}
 \end{table}

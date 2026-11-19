@@ -1,0 +1,32 @@
+**Weight precision on B200 for the prefill and cached-prefix workloads (replication): gross board energy with nvfp4 weights over fp8, at matched shape. Prefill: a cache-miss prompt of the stated length, one output token. Prefix: a request with a prefix of the stated length, cached or sent uncached, 200 fresh input and 200 output tokens. The rows describe the two tested 4-bit versions, as in Table \ref{tab:precision}.**
+
+| Model | Acc. | Workload | Tokens | Target B | Unit | fp8 | nvfp4 | nvfp4 / fp8 | Pods nvfp4 / fp8 |
+|---|---|---|---|---|---|---|---|---|---|
+| Llama-3.3-70B | B200 | prefill | 1,024 | 1 | J per prompt token | 0.1025 [0.1025, 0.1026] | 0.0553 [0.0552, 0.0555] | 0.54 [0.538, 0.541] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefill | 1,024 | 8 | J per prompt token | 0.0745 [0.0741, 0.0748] | 0.03859 [0.03856, 0.03862] | 0.518 [0.516, 0.521] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefill | 4,096 | 1 | J per prompt token | 0.083 [0.0825, 0.0834] | 0.0441 [0.0439, 0.0444] | 0.532 [0.527, 0.538] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefill | 4,096 | 8 | J per prompt token | 0.0822 [0.082, 0.0824] | 0.0408 [0.0406, 0.0409] | 0.496 [0.492, 0.499] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefill | 16,384 | 1 | J per prompt token | 0.0975 [0.0968, 0.0982] | 0.0518 [0.0517, 0.0518] | 0.531 [0.526, 0.535] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefill | 16,384 | 8 | J per prompt token | 0.092 [0.0913, 0.0926] | 0.0481 [0.048, 0.0481] | 0.523 [0.519, 0.527] | 1 / 2 |
+| Qwen3-8B | B200 | prefill | 1,024 | 1 | J per prompt token | 0.0412 [0.0386, 0.0438] | 0.021 [0.0194, 0.0225] | 0.508 [0.502, 0.514] | 2 / 2 |
+| Qwen3-8B | B200 | prefill | 1,024 | 8 | J per prompt token | 0.0366 [0.0359, 0.0373] | 0.00897 [0.00882, 0.00911] | 0.245 [0.244, 0.246] | 2 / 2 |
+| Qwen3-8B | B200 | prefill | 4,096 | 1 | J per prompt token | 0.0464 [0.0461, 0.0468] | 0.0115 [0.0109, 0.0122] | 0.249 [0.233, 0.264] | 2 / 2 |
+| Qwen3-8B | B200 | prefill | 4,096 | 8 | J per prompt token | 0.0372 [0.0355, 0.0389] | 0.00776 [0.00774, 0.00778] | 0.209 [0.2, 0.218] | 2 / 2 |
+| Qwen3-8B | B200 | prefill | 16,384 | 1 | J per prompt token | 0.0434 [0.0412, 0.0456] | 0.0111 [0.011, 0.0111] | 0.255 [0.241, 0.27] | 2 / 2 |
+| Qwen3-8B | B200 | prefill | 16,384 | 8 | J per prompt token | 0.0392 [0.0382, 0.0403] | 0.00839 [0.00834, 0.00843] | 0.214 [0.209, 0.218] | 2 / 2 |
+| Llama-3.3-70B | B200 | prefix, cached | 1,024 | 1 | J per request | 2,798 [2,766, 2,830] | 1,931.0 [1,930.9, 1,931.2] | 0.69 [0.682, 0.698] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, uncached | 1,024 | 1 | J per request | 2,878 [2,830, 2,926] | 1,969 [1,968, 1,970] | 0.684 [0.672, 0.696] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, cached | 1,024 | 8 | J per request | 380 [378, 382] | 275 [272, 279] | 0.726 [0.713, 0.738] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, uncached | 1,024 | 8 | J per request | 458 [453, 463] | 309.0 [308.6, 309.4] | 0.675 [0.666, 0.684] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, cached | 16,384 | 1 | J per request | 2,904 [2,866, 2,943] | 2,033 [2,032, 2,034] | 0.7 [0.69, 0.71] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, uncached | 16,384 | 1 | J per request | 4,471 [4,416, 4,525] | 2,847 [2,845, 2,848] | 0.637 [0.629, 0.645] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, cached | 16,384 | 8 | J per request | 470 [469, 471] | 356 [355, 356] | 0.756 [0.754, 0.759] | 1 / 2 |
+| Llama-3.3-70B | B200 | prefix, uncached | 16,384 | 8 | J per request | 1,981 [1,970, 1,992] | 1,152 [1,151, 1,154] | 0.582 [0.578, 0.586] | 1 / 2 |
+| Qwen3-8B | B200 | prefix, cached | 1,024 | 1 | J per request | 419 [412, 426] | 336 [331, 341] | 0.801 [0.801, 0.802] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, uncached | 1,024 | 1 | J per request | 457 [452, 462] | 350 [346, 355] | 0.766 [0.765, 0.768] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, cached | 1,024 | 8 | J per request | 62.0 [60.8, 63.1] | 49.4 [48.7, 50.2] | 0.798 [0.795, 0.801] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, uncached | 1,024 | 8 | J per request | 97.2 [96.9, 97.5] | 56.4 [55.9, 56.9] | 0.58 [0.573, 0.587] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, cached | 16,384 | 1 | J per request | 473 [466, 480] | 391 [384, 397] | 0.825 [0.825, 0.826] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, uncached | 16,384 | 1 | J per request | 1,154 [1,133, 1,175] | 561 [555, 568] | 0.487 [0.483, 0.49] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, cached | 16,384 | 8 | J per request | 101 [99.7, 102] | 88.7 [88.1, 89.4] | 0.88 [0.877, 0.884] | 2 / 2 |
+| Qwen3-8B | B200 | prefix, uncached | 16,384 | 8 | J per request | 452 [397, 507] | 247 [243, 251] | 0.556 [0.479, 0.633] | 2 / 2 |

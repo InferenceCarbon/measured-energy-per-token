@@ -25,3 +25,12 @@ Known items before release:
 4. Tag `v1.0.1`; build the deposit with `tools/build_deposit.py` at the tag: `corpus.tar.gz` (now with `cache_reuse.csv`), `code.tar.gz` and `SHA256SUMS` change; `raw.tar.gz` is unchanged and can be kept from the first version.
 5. Upload the new PDF (`MeasuredEnergyperTokenFourOpenLanguageModels.pdf`) and the changed archives to the new Zenodo version; publish; attach the PDF to a GitHub release at the tag.
 6. arXiv: once the submission is announced, replace it with the 1.0.1 source bundle (`make arxiv`).
+
+## Version 1.1 (replication and extension)
+
+1. Done 17 Nov 2026 for the text: the final text is in `paper/paper.tex` and `refs.bib`, with Section 4.16, Figure 13 (`fig_processes`) and the Conclusion, and the PDF compiles. Still to run at release: `make tables`, `make latency STORE=<raw store>`, `make pdf`, `make arxiv`; confirm the committed tables match and both outputs compile. Pass `PY=` the environment built from `requirements.txt`.
+2. On Zenodo, open the record, choose "New version" and reserve the version DOI. Replace `10.5281/zenodo.XXXXXXXX` in the paper's `\thanks` and Section 6, in `README.md` and in `CITATION.cff`.
+3. Merge to `main` and tag `v1.1`.
+4. Build the deposit at the tag: `python tools/build_deposit.py --meter-repo <meter repository> --out dist/zenodo-v1.1` (about 3 GB before compression; it stops if it finds a credential in any file). Pack `corpus/` and `raw/` as archives, add `code.tar.gz` (a `git archive` of the tag) and `SHA256SUMS`. The raw archive is new in this version: it holds both periods.
+5. Upload the PDF and the archives to the new Zenodo version and publish; attach the PDF to a GitHub release at the tag.
+6. arXiv: replace the submission with the 1.1 source bundle once the earlier one is announced, with an abstract of at most 1,920 characters.

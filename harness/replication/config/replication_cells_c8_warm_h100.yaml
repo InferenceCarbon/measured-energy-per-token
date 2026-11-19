@@ -1,0 +1,46 @@
+# Paper 1 replication, block K rerun on H100: the four DeepSeek-V2-Lite c8 windows on one H100, with a warm-up replay.
+#
+# Why: the B200 warm-up rerun (config/replication_cells_c8_warm.yaml, branch repl-k-warm-b200) showed the block K
+# first-window gap on B200 was a cold-start effect. In block K on H100 (repl-k-h100) the first DeepSeek-V2-Lite
+# window on each pod is also the higher of its repeat pair (+6.0% and +10.8%), smaller than on B200 but in the
+# same direction, while the other three models' H100 pairs differ by at most 2.5%. This file is the B200 rerun
+# file with one change: H100 instead of B200. Run ids are block K's H100 ids; results go to their own branch,
+# repl-k-warm-h100, so both versions stay on record.
+#
+# Reading the result: docs/c8_warm_h100_decision_rule.md, fixed before launch.
+#
+# 4 runs on one H100 (2 batches x 2 repeats).
+matrix_version: 2
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.95
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+  replay_warmup_steps: 30
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+  - id: c8_agent_replay
+    block: K
+    phase: composite
+    description: 30-step synthetic agent (fixed replay harness); agents alone and concurrent
+    vary:
+      target_batch: [1, 8]
+    fixed:
+      steps: 30
+      context_start: 10240
+      context_step: 2048
+      out_per_step: 300
+      cache_policy: controlled
+    context_cap: native_max
+    only_models: [deepseek-v2-lite]
+    only_accelerators: [h100]

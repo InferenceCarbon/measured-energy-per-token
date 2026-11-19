@@ -1,7 +1,9 @@
 """Counter check (Appendix E): the board's cumulative energy counter against the
-trapezoid integral of the raw power samples, for every GPU window of the 917 runs.
+trapezoid integral of the raw power samples, for every GPU window of the corpus.
 
-    python analysis/counter_check.py --store PATH_TO_RAW_STORE
+    python analysis/counter_check.py --store PATH_TO_RAW_STORE [PATH_TO_RAW_STORE ...]
+
+Give every raw store the corpus was built from (version 1.0.0 and the replication).
 
 The raw power samples are in the Zenodo deposit (raw/<branch>/cells/<run_id>/raw/),
 not in this repository. Differences are counter minus integral, as a share of the
@@ -22,18 +24,21 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--store", type=Path, required=True)
+    ap.add_argument("--store", type=Path, required=True, nargs="+")
     ap.add_argument("--features", type=Path, default=ROOT / "data" / "features.parquet")
     a = ap.parse_args()
 
     feats = pd.read_parquet(a.features)
     cells = pd.read_parquet(a.features.parent / "store_tables" / "cells.parquet")
-    act = cells[(cells.kind == "active") & cells.run_id.isin(set(feats.run_id))]
+    act = cells[(cells.kind == "active") & cells.uid.isin(set(feats.uid))]
     rows, missing = [], 0
     for _, w in act.iterrows():
         run_dir = None
-        for c in a.store.glob(f"*/cells/{w.run_id}"):
+        branch = None if w.uid.startswith("v1.0.0:") else w.uid.split(":", 1)[0]
+        for c in (x for st in a.store for x in st.glob(f"*/cells/{w.run_id}")):
             try:
+                if branch is not None and c.parents[len(Path(w.run_id).parts)].name != branch:
+                    continue
                 if json.loads((c / "cell.json").read_text())["pod"]["pod_id"] == w.pod_id:
                     run_dir = c
             except (KeyError, ValueError, FileNotFoundError):
@@ -50,7 +55,7 @@ def main() -> None:
             t, p = s.t.to_numpy(), s.p_w.to_numpy()
             trap = float(np.sum(0.5 * (p[1:] + p[:-1]) * np.diff(t)))
             ext = trap + p[0] * (t[0] - g["start_s"]) + p[-1] * (g["end_s"] - t[-1])
-            rows.append(dict(run_id=w.run_id, dur=g["duration_s"], counter=g["energy_j"], trap=trap, ext=ext))
+            rows.append(dict(run_id=w.uid, dur=g["duration_s"], counter=g["energy_j"], trap=trap, ext=ext))
     r = pd.DataFrame(rows)
     print(f"GPU windows: {len(r)}, runs: {r.run_id.nunique()}, missing: {missing}")
     for col, label in (("ext", "edge-extended"), ("trap", "plain trapezoid")):

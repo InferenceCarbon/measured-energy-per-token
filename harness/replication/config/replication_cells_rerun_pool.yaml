@@ -1,0 +1,176 @@
+# Paper 1 replication: rerun of the cached-context configurations whose prefix cache was evicted inside the
+# window (docs/cache_diagnostic/README.md; 66 of 883 windows, r < 0.8). Each configuration is rerun at the
+# largest target batch the server's KV pool holds, so the top of each batch grid is a clean window.
+#
+# How the targets are set: every entry asks for target_batch 256 and the planner resizes it to
+#   B_max = floor(0.95 x observed pool tokens / request tokens)      (planner block below; config/kv_pool_observed.yaml)
+# so the run id carries the resized target. Cell ids, `fixed` blocks and the other variant keys are those of
+# config/replication_cells.yaml (and of replication_cells_e_gmu07.yaml for the NVFP4 entry), so a rerun
+# window belongs to the same experiment as the windows it completes. An id appears more than once here because
+# each entry is scoped to the models, accelerators and contexts that need the rerun; the `fixed` block of an id
+# is the same in every entry.
+#
+# Not rerun: configurations whose top batch ran clean on another pod; Gemma-3-27B at about 125k context on one
+# H100 (one request does not fit the 62,336-token pool); the c9b cache-pressure cells (eviction is their point);
+# cells of the original matrix (config/cells.yaml).
+#
+# 24 configurations, 2 repeats: 32 runs on an H100 pod with 2 GPUs, 8 on H200, 8 on B200.
+# Results branches: repl-r-h100, repl-r-h200, repl-r-b200.
+matrix_version: 2
+matrix: replication
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.95
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+  # ---- Block H, decode against context ----
+  - id: h_added_decode_context
+    block: H
+    phase: decode
+    description: Rerun at the pool B_max, about 125k context (evicted at 8, 17, 23 and 38)
+    vary:
+      context_cached: [native_max]
+      target_batch: [256]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [gemma-3-27b, gpt-oss-120b]
+    only_accelerators: [h200, b200]
+
+  - id: h_added_decode_context
+    block: H
+    phase: decode
+    description: Rerun at the pool B_max, 16k context, Gemma (evicted at 8, 45 and 64)
+    vary:
+      context_cached: [16384]
+      target_batch: [256]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [gemma-3-27b]
+    only_accelerators: [h100, h200, b200]
+
+  - id: h_added_decode_context
+    block: H
+    phase: decode
+    description: Rerun at the pool B_max, 16k context, gpt-oss on H100 (evicted at 6)
+    vary:
+      context_cached: [16384]
+      target_batch: [256]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [gpt-oss-120b]
+    only_accelerators: [h100]
+
+  - id: h_added_decode_context
+    block: H
+    phase: decode
+    description: Rerun at the pool B_max, 1k and 4k context on H100 (evicted at 24 and 64)
+    vary:
+      context_cached: [1024, 4096]
+      target_batch: [256]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [gemma-3-27b, gpt-oss-120b]
+    only_accelerators: [h100]
+
+  # ---- Block H, decode against batch ----
+  - id: h_added_decode_batch
+    block: H
+    phase: decode
+    description: Rerun at the pool B_max on H100 (evicted at 64, 91 and 128)
+    vary:
+      target_batch: [256]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [gemma-3-27b, gpt-oss-120b]
+    only_accelerators: [h100]
+
+  # ---- Block H, cached-prefix access with its matched uncached control ----
+  - id: h_added_cached_prefix
+    block: H
+    phase: prefix_access
+    description: Rerun of the 16k cached prefix at the pool B_max on H100, with the control at the same batch (cached arm evicted at 8)
+    vary:
+      prefix_cached: [16384]
+      fresh_in: [200]
+      target_batch: [256]
+      control: [cached, uncached]
+    fixed:
+      out: 200
+    only_models: [gemma-3-27b, gpt-oss-120b]
+    only_accelerators: [h100]
+
+  # ---- Block B, deepest batch at 16k ----
+  - id: b_top_batch_c2
+    block: B
+    phase: decode
+    description: Rerun at the pool B_max, 16k context on H100 (evicted at 24 and 50)
+    vary:
+      target_batch: [256]
+      context_cached: [16384]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, llama-3.3-70b]
+    only_accelerators: [h100]
+
+  # ---- Block D, context ladder ----
+  - id: d_context_ladder_decode
+    block: D
+    phase: decode
+    description: Rerun at the pool B_max, 24k and 64k context, Llama-3.3-70B on H100 (evicted at 16 and 6)
+    vary:
+      context_cached: [24576, 65536]
+      target_batch: [256]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.3-70b]
+    only_accelerators: [h100]
+
+  # ---- Block G, H200 ----
+  - id: g_h200_decode_context
+    block: G
+    phase: decode
+    description: Rerun at the pool B_max, 4k context, Llama-3.3-70B on H200 (evicted at 64)
+    vary:
+      context_cached: [4096]
+      target_batch: [256]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.3-70b]
+    only_accelerators: [h200]
+
+  # ---- Block E, NVFP4 at the 0.7 memory target ----
+  - id: e_nvfp4_ladder
+    block: E
+    phase: decode
+    description: Rerun at the pool B_max, Llama-3.3-70B NVFP4 at 16k context, memory target 0.7 (evicted at 31)
+    vary:
+      weight_precision: [nvfp4]
+      target_batch: [256]
+      context_cached: [16384]
+      gpu_memory_utilization: [0.7]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.3-70b]
+    only_accelerators: [b200]

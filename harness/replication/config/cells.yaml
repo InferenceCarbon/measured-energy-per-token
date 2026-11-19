@@ -1,0 +1,187 @@
+# Calibration matrix — Experiment Plan v3, Section 4.
+#
+# This file is the DESIGN. The feasibility generator (meter/feasibility.py)
+# turns it into the RUN MANIFEST by applying each model's template and the
+# accelerator's HBM: cells that do not fit are dropped or resized, and the
+# manifest records why. GPU-hours are computed from the manifest, never
+# from this file.
+#
+# Window rules (Plan v3 §3): every cell runs a single phase for at least
+# `min_window_s` or `min_tokens`, whichever is longer, after an excluded
+# warm-up; 60 s idle before and after; two repeats at different times in
+# the pod's life.
+
+matrix_version: 1
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+# Context grid: "native_max" resolves per model.
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+
+  - id: c0_static
+    phase: idle_loaded
+    description: Static power with model loaded, no requests (default clocks)
+    # base/boost pair dropped 23 Oct: Runpod containers refuse nvidia-smi -lgc
+    # ("The current user does not have permission to change clocks"); the
+    # paper states static power at default clocks only.
+    vary:
+      clock_mode: [default]
+    fixed: {}
+
+  - id: c1_decode_batch
+    phase: decode
+    description: Decode energy vs achieved batch depth
+    vary:
+      target_batch: [1, 4, 16, 64, 256]     # capped at B_max by feasibility
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+
+  - id: c2_decode_context
+    phase: decode
+    description: Decode energy vs attended context (KV term; crossover B = W/K)
+    vary:
+      context_cached: context_grid
+      target_batch: [8, 64]
+    fixed:
+      fresh_in: 200
+      out: 256
+
+  - id: c3_prefill_miss
+    phase: prefill
+    description: Fresh prefill, cache miss, max_tokens=1
+    vary:
+      fresh_in: context_grid
+      target_batch: [1, 8]
+    fixed:
+      prefix_caching: false
+      out: 1
+
+  - id: c4_cached_prefix
+    phase: prefix_access
+    description: Cached-prefix access with fresh suffix; matched uncached control
+    vary:
+      prefix_cached: [1024, 4096, 16384]
+      fresh_in: [200, 2048]
+      target_batch: [1, 8]
+      control: [cached, uncached]     # uncached = same total length, all fresh
+    fixed:
+      out: 200
+
+  - id: c5_clock_sweep
+    phase: decode
+    description: SM clock sweep at fixed bytes — identifiability check
+    # DISABLED 23 Oct (James): clock locking is refused inside Runpod
+    # containers (pilots 1 and 2). Declared limitation: time and byte
+    # coefficients are separated by the batch and context grids only, and
+    # the closed-model envelope carries a declared clock-sensitivity term.
+    # Re-enable only on bare-metal hardware with root.
+    disabled: true
+    disabled_reason: "nvidia-smi -lgc refused in Runpod containers; declared limitation"
+    vary:
+      sm_clock_pct: [60, 80, 100]
+      target_batch: [16, 64]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    record_actual: [sm_clock_mhz, mem_clock_mhz, power_w, temp_c]
+
+  - id: c6_tensor_parallel
+    phase: decode
+    description: Tensor-parallel penalty at fixed batch
+    vary:
+      tp: per_model            # 8B: [1,2]; 70B: [2,4]; others skipped
+      target_batch: [1, 16, 64]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, llama-3.3-70b]
+
+  - id: c7_precision
+    phase: decode
+    description: FP8 vs NVFP4 on B200
+    vary:
+      weight_precision: [fp8, nvfp4]
+      target_batch: [8, 64]
+      context_cached: [1024, 16384]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_accelerators: [b200]
+
+  - id: c9_kv_pressure
+    phase: decode
+    description: >
+      Added 25 Oct (Astra review). The 70B/B200 cells at 16.7k context and batch 23-26 ran at a quarter of the
+      throughput of their batch-30 repeat at the same power; KV-cache occupancy near capacity (scheduler
+      preemption) is the candidate. This sweep holds the context and walks the batch through the occupancy
+      range so the unsupported-region boundary is measured, not guessed, and a discrepancy allowance for the
+      region can be calibrated if the paper keeps the region in scope.
+    vary:
+      target_batch: [12, 16, 20, 24, 28, 32]
+      context_cached: [16384]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.3-70b]
+    only_accelerators: [b200]
+
+  - id: c9b_kv_pressure_diag
+    phase: decode
+    description: >
+      Added 25 Oct evening (Astra's second review, item 11). The c9 sweep ran without a preemption counter: batch
+      12-28 at 16.7k context on 70B/B200 was clean up to 0.89 KV usage, and the target-31 cell collapsed
+      (achieved 23, a waiting queue, 6.3 J per token). This rerun carries vllm:num_preemptions_total and the
+      allocated KV pool from the server's startup line, at the fast points (12, 20, 28) and the slow point
+      (32), and repeats the same batches at gpu-memory-utilization 0.7 so the boundary can be seen to move
+      with the pool. Targets are NOT resized to the template B_max: where the real pool ends is the measurement.
+    no_resize: true
+    repeats: 1
+    vary:
+      target_batch: [12, 20, 28, 32]
+      context_cached: [16384]
+      gpu_memory_utilization: [0.9, 0.7]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.3-70b]
+    only_accelerators: [b200]
+
+  - id: c8_agent_replay
+    phase: composite
+    description: 30-step synthetic agent; energy predicted before the run
+    vary:
+      target_batch: [1, 8]
+    fixed:
+      steps: 30
+      context_start: 10240
+      context_step: 2048
+      out_per_step: 300
+      cache_policy: controlled      # hits and misses scripted and recorded
+    context_cap: native_max
+
+  - id: c9_traffic_profile
+    phase: decode
+    description: Nsight traffic profile on a small subset — separate pass
+    vary:
+      target_batch: [1, 64]
+      context_cached: [1024, 16384]
+    fixed:
+      fresh_in: 200
+      out: 64
+    separate_pass: true
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite]
+    repeats: 1

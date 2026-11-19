@@ -1,0 +1,12 @@
+**Two larger models: cached-prefix access (experiment c4): gross board energy per completed request with a warm cached prefix and a fresh suffix, against a matched uncached control of the same total length, both with 200 output tokens. The ratio is below 1 when caching saved energy. Cache reuse: the share of cached tokens the server found in its cache during the window, over the share expected, lowest of the cached runs. Pods: pods on the cached and uncached sides. Pairing 'pod': the ratio is formed within each pod and the band is the range over pods; 'repeat': both sides on one pod, ratio formed per repeat, band the range of the repeats. Brackets on the per-request columns: the range over pods.**
+
+| Model | Acc. | Cached prefix | Fresh in | Target B | Cached, J per request | Uncached, J per request | Cached / uncached | Cache reuse | Pods | Pairing |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Llama-3.1-405B | H200 | 1,024 | 200 | 1 | 15,780 [15,658, 15,901] | 16,345 [16,272, 16,418] | 0.965 [0.954, 0.977] | 1.00 | 2 / 1 | none |
+| Llama-3.1-405B | H200 | 1,024 | 200 | 8 | 2,209 [2,206, 2,212] | 2,877 [2,867, 2,887] | 0.768 [0.764, 0.772] | 1.00 | 1 / 2 | none |
+| Llama-3.1-405B | H200 | 16,384 | 200 | 1 | 16,168 [16,109, 16,227] | 28,359 [28,309, 28,410] | 0.57 [0.569, 0.571] | 1.00 | 1 / 1 | repeat |
+| Llama-3.1-405B | H200 | 16,384 | 200 | 8 | 2,726 [2,725, 2,727] | 14,300 [14,298, 14,302] | 0.1906 [0.1906, 0.1907] | 1.00 | 2 / 1 | none |
+| Qwen3-235B-A22B | B200 | 1,024 | 200 | 1 | 1,682 [1,679, 1,684] | 1,759 [1,757, 1,762] | 0.956 [0.955, 0.956] | 1.00 | 1 / 1 | repeat |
+| Qwen3-235B-A22B | B200 | 1,024 | 200 | 8 | 457 [451, 464] | 549 [545, 553] | 0.833 [0.828, 0.839] | 1.00 | 1 / 1 | repeat |
+| Qwen3-235B-A22B | B200 | 16,384 | 200 | 1 | 1,826 [1,824, 1,827] | 3,426 [3,401, 3,451] | 0.533 [0.529, 0.537] | 1.00 | 1 / 1 | repeat |
+| Qwen3-235B-A22B | B200 | 16,384 | 200 | 8 | 514 [513, 515] | 1,950 [1,922, 1,978] | 0.264 [0.261, 0.267] | 1.00 | 1 / 1 | repeat |

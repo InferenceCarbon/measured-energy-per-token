@@ -276,14 +276,21 @@ def main(md: Path, out: Path) -> None:
         nxt = next((c for c in tblPr if c.tag in (qn("w:tblCellMar"), qn("w:tblLook"), qn("w:tblCaption"), qn("w:tblDescription"))), None)
         nxt.addprevious(lay) if nxt is not None else tblPr.append(lay)
 
+    last_end = None
     for tbl in doc.tables:
         if len(tbl.columns) < 9:
             continue
         t = tbl._tbl
         cap = t.getprevious()
         start = cap if cap is not None and cap.tag == qn("w:p") and "".join(cap.itertext()).startswith("Table") else t
-        start.addprevious(sect_par(landscape=False))
-        t.addnext(sect_par(landscape=True))
+        if last_end is not None and start.getprevious() is last_end:
+            # two wide tables in a row share one landscape section: closing the first and opening a portrait
+            # section before the second left an empty portrait page between them
+            last_end.getparent().remove(last_end)
+        else:
+            start.addprevious(sect_par(landscape=False))
+        last_end = sect_par(landscape=True)
+        t.addnext(last_end)
 
     doc.core_properties.title = paras[title_i].text
     doc.core_properties.author = "James Manktelow"

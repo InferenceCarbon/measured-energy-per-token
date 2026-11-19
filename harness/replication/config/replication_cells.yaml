@@ -1,0 +1,289 @@
+# Paper 1 replication campaign (blocks A to H of the replication plan, full scope confirmed
+# 9 Nov 2026). This file is the DESIGN; meter.feasibility turns it into the run manifest.
+#
+#   python -m meter.campaign --mode campaign --dry-run --accelerator h100 --n-gpus 2 \
+#       --cells-file config/replication_cells.yaml [--cells <ids>] [--models <keys>]
+#
+# Block A (a third pod for every single-pod configuration) is not a cell: it re-runs named
+# run ids from the ORIGINAL matrix (config/replication_block_a_run_ids.txt) once each on a new
+# pod:  --run-ids-file config/replication_block_a_run_ids.txt   (no --cells-file).
+# Block B needs --rerun-bmax on the pod, because the earlier result at target 256 is recorded
+# as a "target batch unreachable" observation (the client's connection cap, fixed 9 Nov).
+#
+# Cell ids all start with a block letter and never collide with the original matrix, so a
+# pod's done.json resume cannot skip anything by accident. Protocol is the campaign's: single
+# phase >= 60 s and >= 20,000 tokens after an excluded warm-up, 60 s idle either side, 5 %
+# drift tolerance, temperature 0, seed 20261022. Repeats go to DIFFERENT pods by --shard.
+#
+# Prices: Runpod Secure Cloud per GPU-hour, read from the Runpod API 9 Nov 2026:
+# H100 SXM 3.99, H200 SXM 5.29, B200 7.99 USD.
+
+matrix_version: 2
+matrix: replication          # admits the templates tagged `matrix: replication` (Gemma-3-27B, gpt-oss-120b)
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+
+  # ---- Block B: repeats in the highest batch bin, uncapped client (two pods) ----
+  - id: b_top_batch_c1
+    block: B
+    phase: decode
+    description: Deepest batch at 1k context with the connection cap removed (c1 target 256)
+    vary:
+      target_batch: [256]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]
+
+  - id: b_top_batch_c2
+    block: B
+    phase: decode
+    description: Deepest batch at long context with the connection cap removed (c2 target 64 at 16k and native max)
+    vary:
+      target_batch: [64]
+      context_cached: [16384, native_max]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]
+
+  # ---- Block C: fixed batch points 8 / 32 / 128 at 1k context (1, 4, 16, 64 and 256 exist) ----
+  - id: c_batch_points
+    block: C
+    phase: decode
+    description: Decode energy at target batches 8, 32 and 128, filling the gaps in the batch ladder
+    vary:
+      target_batch: [8, 32, 128]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]
+
+  # ---- Block D: context ladder to 128k (decode and prefill); points above a model's window are dropped ----
+  - id: d_context_ladder_decode
+    block: D
+    phase: decode
+    description: Decode against context on a finer ladder (1k, 4k, 16k and native max exist)
+    vary:
+      context_cached: [2048, 8192, 24576, 32768, 65536, 98304, 131072]
+      target_batch: [1, 8, 32]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]
+
+  - id: d_context_ladder_prefill
+    block: D
+    phase: prefill
+    description: Cache-miss prefill on the same ladder (also locates the Qwen3-8B/B200 step between 16k and 31k)
+    vary:
+      fresh_in: [2048, 8192, 24576, 32768, 65536, 98304, 131072]
+      target_batch: [1, 8]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]
+
+  # ---- Block E: nvfp4 ladder on B200, fp8 at the same points, memory offer 0.8 (0.7 fallback if the kernels OOM) ----
+  - id: e_nvfp4_ladder
+    block: E
+    phase: decode
+    description: fp8 against nvfp4 at five batches and two contexts
+    vary:
+      weight_precision: [fp8, nvfp4]
+      target_batch: [1, 8, 32, 64, 128]
+      context_cached: [1024, 16384]
+      gpu_memory_utilization: [0.8]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_accelerators: [b200]
+    only_models: [qwen3-8b, llama-3.3-70b]
+
+  - id: e_nvfp4_prefill_miss
+    block: E
+    phase: prefill
+    description: Cache-miss prefill (c3 shape) with fp8 and nvfp4 weights; the corpus has no nvfp4 prefill window
+    vary:
+      weight_precision: [fp8, nvfp4]
+      fresh_in: [1024, 4096, 16384]
+      target_batch: [1, 8]
+      gpu_memory_utilization: [0.8]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_accelerators: [b200]
+    only_models: [qwen3-8b, llama-3.3-70b]
+
+  - id: e_nvfp4_cached_prefix
+    block: E
+    phase: prefix_access
+    description: Cached-prefix access with matched uncached control (c4 shape) with fp8 and nvfp4 weights
+    vary:
+      weight_precision: [fp8, nvfp4]
+      prefix_cached: [1024, 16384]
+      fresh_in: [200]
+      target_batch: [1, 8]
+      control: [cached, uncached]
+      gpu_memory_utilization: [0.8]
+    fixed:
+      out: 200
+    only_accelerators: [b200]
+    only_models: [qwen3-8b, llama-3.3-70b]
+
+  # ---- Block F: speculative decoding on / off (also serves the detection tests) ----
+  - id: f_speculation
+    block: F
+    phase: decode
+    description: n-gram speculative decoding (vLLM --speculative-config ngram, 3 speculative tokens) against the plain server
+    vary:
+      speculation: [none, ngram3]
+      target_batch: [1, 8, 32]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+    only_accelerators: [h100, b200]
+
+  # ---- Block G: H200, the core grid for the four models ----
+  - id: g_h200_static
+    block: G
+    phase: idle_loaded
+    description: Static power with model loaded, no requests (default clocks), H200
+    vary:
+      clock_mode: [default]
+    fixed: {}
+    only_accelerators: [h200]
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+
+  - id: g_h200_decode_batch
+    block: G
+    phase: decode
+    description: Decode energy against batch on H200
+    vary:
+      target_batch: [1, 8, 32, 64, 128]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_accelerators: [h200]
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+
+  - id: g_h200_decode_context
+    block: G
+    phase: decode
+    description: Decode energy against attended context on H200
+    vary:
+      context_cached: context_grid
+      target_batch: [8, 64]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_accelerators: [h200]
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+
+  - id: g_h200_prefill_miss
+    block: G
+    phase: prefill
+    description: Cache-miss prefill on H200
+    vary:
+      fresh_in: context_grid
+      target_batch: [1, 8]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_accelerators: [h200]
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+
+  - id: g_h200_cached_prefix
+    block: G
+    phase: prefix_access
+    description: Cached-prefix access with matched uncached control on H200 (1k and 16k cached, 200 fresh)
+    vary:
+      prefix_cached: [1024, 16384]
+      fresh_in: [200]
+      target_batch: [1, 8]
+      control: [cached, uncached]
+    fixed:
+      out: 200
+    only_accelerators: [h200]
+    only_models: [qwen3-8b, qwen3-30b-a3b, deepseek-v2-lite, llama-3.3-70b]
+
+  # ---- Block H: Gemma-3-27B (fp8) and gpt-oss-120b (native MXFP4), the core grid on H100, H200 and B200 ----
+  - id: h_added_static
+    block: H
+    phase: idle_loaded
+    description: Static power with model loaded, no requests (default clocks)
+    vary:
+      clock_mode: [default]
+    fixed: {}
+    only_models: [gemma-3-27b, gpt-oss-120b]
+
+  - id: h_added_decode_batch
+    block: H
+    phase: decode
+    description: Decode energy against batch
+    vary:
+      target_batch: [1, 8, 32, 64, 128]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [gemma-3-27b, gpt-oss-120b]
+
+  - id: h_added_decode_context
+    block: H
+    phase: decode
+    description: Decode energy against attended context
+    vary:
+      context_cached: context_grid
+      target_batch: [8, 64]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [gemma-3-27b, gpt-oss-120b]
+
+  - id: h_added_prefill_miss
+    block: H
+    phase: prefill
+    description: Cache-miss prefill
+    vary:
+      fresh_in: context_grid
+      target_batch: [1, 8]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_models: [gemma-3-27b, gpt-oss-120b]
+
+  - id: h_added_cached_prefix
+    block: H
+    phase: prefix_access
+    description: Cached-prefix access with matched uncached control (1k and 16k cached, 200 fresh)
+    vary:
+      prefix_cached: [1024, 16384]
+      fresh_in: [200]
+      target_batch: [1, 8]
+      control: [cached, uncached]
+    fixed:
+      out: 200
+    only_models: [gemma-3-27b, gpt-oss-120b]

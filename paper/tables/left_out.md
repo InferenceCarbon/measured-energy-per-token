@@ -1,0 +1,12 @@
+**Runs left out of every table, by reason and by round of measurement. The file data/readings\_left\_out.csv lists each one with its reason. Last column: yes means the run is a row of the corpus file, marked with its reason, and the analysis script skips it; no means it is not, and the deposit holds its raw records where they survive (Section \ref{sec:stats}).**
+
+| Reason | Version 1.0 runs | Replication runs | In the corpus file |
+|---|---|---|---|
+| Cached context evicted during the window (cache reuse below 0.95) | 11 | 74 | yes, marked |
+| No usable measurement window | 13 | 11 | yes, marked |
+| Server stopped during the window | 0 | 4 | yes, marked |
+| Superseded by a later measurement of the same configuration | 36 | 54 | version 1.0 only, marked |
+| Copy of a reading already in the corpus | 0 | 119 | no |
+| Pilot run made before the experiment was fixed | 0 | 12 | no |
+| Earlier attempt of a run that was run again | 0 | 76 | no |
+| Total | 60 | 350 |  |

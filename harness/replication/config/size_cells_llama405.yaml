@@ -1,0 +1,98 @@
+# Paper 1 size run (block I), second model: Llama-3.1-405B (fp8, 381.9 GiB of weights) on a pod with 4 x B200,
+# tensor parallel 4; see the template in config/models.yaml. The dense counterpart of the Qwen3-235B-A22B run
+# (config/size_cells.yaml): same cell ids, shapes, context grid (to 64k) and planner rule, so the two models
+# sit on one grid. Kept in its own file because it needs a different pod (4 GPUs, a 470 GB volume).
+#
+# Targets are sized from the KV pool (planner block): the pool is the TEMPLATE estimate until this model has
+# been served once, so the plan fills only 0.75 of it; the harness flags any window whose cache is evicted
+# (meter/cachecheck.py).
+#
+# 60 runs per pod (2 repeats). Results branch: repl-i-llama405-b200.
+#
+# H200 alternative (added 13 Nov 2026): no 4 x B200 pod could be placed in about 40 hourly launch attempts on
+# 12-13 November, so the same grid may run on 4 x H200 instead (tensor parallel 4; branch repl-i-llama405-h200).
+# Llama-3.3-70B was measured on one H200 at the same batch points (block G), so the 70B-to-405B step is measured
+# on one chip type either way. On H200 the KV pool is about a third of the B200's (template about 273,000
+# tokens), so the plan has 58 runs and the long-context top batches are lower (16k: 12 against 35; 64k: 3 only).
+# Only one of the two pods is meant to run: whichever places first.
+matrix_version: 2
+matrix: size
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.75      # the pool is a template estimate here; Gemma's real pool was far below its template
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+
+context_grid: [1024, 4096, 16384, 65536]
+
+cells:
+  - id: i_size_static
+    block: I
+    phase: idle_loaded
+    description: Static power with model loaded, no requests (default clocks)
+    vary:
+      clock_mode: [default]
+    fixed: {}
+    only_models: [llama-3.1-405b]
+    only_accelerators: [b200, h200]
+
+  - id: i_size_decode_batch
+    block: I
+    phase: decode
+    description: Decode energy against batch
+    vary:
+      target_batch: [1, 8, 32, 64, 128]
+    fixed:
+      context_cached: 1024
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.1-405b]
+    only_accelerators: [b200, h200]
+
+  - id: i_size_decode_context
+    block: I
+    phase: decode
+    description: Decode energy against attended context
+    vary:
+      context_cached: context_grid
+      target_batch: [8, 64]
+    fixed:
+      fresh_in: 200
+      out: 256
+    only_models: [llama-3.1-405b]
+    only_accelerators: [b200, h200]
+
+  - id: i_size_prefill_miss
+    block: I
+    phase: prefill
+    description: Cache-miss prefill
+    vary:
+      fresh_in: context_grid
+      target_batch: [1, 8]
+    fixed:
+      prefix_caching: false
+      out: 1
+    only_models: [llama-3.1-405b]
+    only_accelerators: [b200, h200]
+
+  - id: i_size_cached_prefix
+    block: I
+    phase: prefix_access
+    description: Cached-prefix access with matched uncached control (1k and 16k cached, 200 fresh)
+    vary:
+      prefix_cached: [1024, 16384]
+      fresh_in: [200]
+      target_batch: [1, 8]
+      control: [cached, uncached]
+    fixed:
+      out: 200
+    only_models: [llama-3.1-405b]
+    only_accelerators: [b200, h200]

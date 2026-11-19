@@ -1,15 +1,33 @@
-**Metered runs per experiment, model and accelerator (917 runs).**
+**Runs used in the tables, by experiment, accelerator and model (2,378 of the 2,527 runs in the corpus; Table \ref{tab:left_out} counts the rest). The last two columns are the two larger models of Section \ref{sec:size}.**
 
-| Experiment | H100 Qwen3-8B | H100 Qwen3-30B-A3B | H100 DeepSeek-V2-Lite | H100 Llama-3.3-70B | B200 Qwen3-8B | B200 Qwen3-30B-A3B | B200 DeepSeek-V2-Lite | B200 Llama-3.3-70B | Total |
-|---|---|---|---|---|---|---|---|---|---|
-| c0_static | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 16 |
-| c1_decode_batch | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 10 | 80 |
-| c2_decode_context | 22 | 16 | 18 | 14 | 22 | 16 | 19 | 14 | 141 |
-| c3_prefill_miss | 22 | 16 | 18 | 16 | 22 | 16 | 18 | 16 | 144 |
-| c4_cached_prefix | 48 | 48 | 48 | 48 | 48 | 48 | 48 | 48 | 384 |
-| c6_tensor_parallel | 12 | 0 | 0 | 12 | 12 | 0 | 0 | 12 | 48 |
-| c7_precision | 0 | 0 | 0 | 0 | 16 | 8 | 8 | 16 | 48 |
-| c8_agent_replay | 6 | 4 | 4 | 4 | 6 | 4 | 4 | 4 | 36 |
-| c9_kv_pressure | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 12 |
-| c9b_kv_pressure_diag | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8 | 8 |
-| Total | 122 | 96 | 100 | 106 | 138 | 104 | 109 | 142 | 917 |
+| Experiment | Acc. | Qwen3-8B | Qwen3-30B-A3B | DeepSeek-V2-Lite | Llama-3.3-70B | Gemma-3-27B | gpt-oss-120b | Qwen3-235B-A22B | Llama-3.1-405B | Total |
+|---|---|---|---|---|---|---|---|---|---|---|
+| c0_static | H100 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 0 | 12 |
+| c0_static | H200 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 14 |
+| c0_static | B200 | 2 | 2 | 2 | 2 | 2 | 2 | 2 | 0 | 14 |
+| c1_decode_batch | H100 | 19 | 19 | 16 | 15 | 6 | 8 | 0 | 0 | 83 |
+| c1_decode_batch | H200 | 10 | 10 | 10 | 10 | 10 | 10 | 0 | 10 | 70 |
+| c1_decode_batch | B200 | 24 | 24 | 24 | 20 | 10 | 10 | 10 | 0 | 122 |
+| c2_decode_context | H100 | 46 | 44 | 50 | 44 | 8 | 10 | 0 | 0 | 202 |
+| c2_decode_context | H200 | 16 | 16 | 16 | 14 | 14 | 16 | 0 | 14 | 106 |
+| c2_decode_context | B200 | 48 | 44 | 48 | 52 | 14 | 16 | 16 | 0 | 238 |
+| c3_prefill_miss | H100 | 36 | 32 | 36 | 38 | 12 | 12 | 0 | 0 | 166 |
+| c3_prefill_miss | H200 | 16 | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 112 |
+| c3_prefill_miss | B200 | 36 | 32 | 36 | 44 | 16 | 16 | 16 | 0 | 196 |
+| c4_cached_prefix | H100 | 48 | 48 | 48 | 48 | 18 | 18 | 0 | 0 | 228 |
+| c4_cached_prefix | H200 | 16 | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 112 |
+| c4_cached_prefix | B200 | 48 | 48 | 48 | 48 | 16 | 16 | 16 | 0 | 240 |
+| c6_tensor_parallel | H100 | 12 | 0 | 0 | 15 | 0 | 0 | 0 | 0 | 27 |
+| c6_tensor_parallel | B200 | 15 | 0 | 0 | 18 | 0 | 0 | 0 | 0 | 33 |
+| c7_precision | B200 | 60 | 8 | 8 | 47 | 0 | 0 | 0 | 0 | 123 |
+| c7_precision_cached | B200 | 32 | 0 | 0 | 32 | 0 | 0 | 0 | 0 | 64 |
+| c7_precision_prefill | B200 | 24 | 0 | 0 | 24 | 0 | 0 | 0 | 0 | 48 |
+| c8_agent_replay | H100 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 16 |
+| c8_agent_replay | B200 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 16 |
+| c9_kv_pressure | B200 | 0 | 0 | 0 | 18 | 0 | 0 | 0 | 0 | 18 |
+| c9b_kv_pressure_diag | B200 | 0 | 0 | 0 | 16 | 0 | 0 | 0 | 0 | 16 |
+| c10_speculation | H100 | 12 | 12 | 12 | 12 | 0 | 0 | 0 | 0 | 48 |
+| c10_speculation | B200 | 12 | 12 | 12 | 12 | 0 | 0 | 0 | 0 | 48 |
+| c11_precision_probe | H100 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 2 |
+| c11_precision_probe | B200 | 2 | 0 | 0 | 2 | 0 | 0 | 0 | 0 | 4 |
+| Total |  | 547 | 395 | 410 | 576 | 162 | 170 | 60 | 58 | 2378 |

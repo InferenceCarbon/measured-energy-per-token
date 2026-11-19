@@ -1,0 +1,9 @@
+Model,Server,Requests,"Tokens per stream event, median over batches",range,Held out: labeled speculative,Held out: labeled plain
+DeepSeek-V2-Lite,speculative,1136,1.08,1.06 to 2.64,1030,106
+DeepSeek-V2-Lite,plain,6028,1.01,1.01 to 1.02,1660,4368
+Llama-3.3-70B,speculative,1926,1.13,1.11 to 1.18,1830,96
+Llama-3.3-70B,plain,2061,1,1 to 1,0,2061
+Qwen3-30B-A3B,speculative,4239,2.02,1.23 to 2.06,3956,283
+Qwen3-30B-A3B,plain,4722,1,1 to 1,0,4722
+Qwen3-8B,speculative,5504,1.36,1.31 to 1.47,4875,629
+Qwen3-8B,plain,6083,1.01,1 to 1.01,3,6080

@@ -1,0 +1,49 @@
+# Paper 1 replication, block K rerun: the four DeepSeek-V2-Lite c8 windows on one B200, with a warm-up replay.
+#
+# Why: in block K (repl-k-b200) the first DeepSeek-V2-Lite window on each B200 pod ran slower than the
+# other DeepSeek windows; the gap looks like first-use kernel compilation, which the c8 protocol does not
+# exclude (c8 had no warm-up: the replay itself is the window). This file is config/replication_cells_c8.yaml
+# with two changes: DeepSeek-V2-Lite on B200 only, and `replay_warmup_steps` set, so each window is preceded by
+# an excluded replay of the whole script at the same number of agents under other agents' prefixes
+# (meter.cell, REPLAY_WARMUP_AGENT_BASE). Run ids are block K's; the results go to their own branch,
+# repl-k-warm-b200, so both versions stay on record.
+#
+# Reading the result: if the first window on the pod no longer stands apart, the gap was a warm-up effect and
+# these four windows replace block K's DeepSeek B200 rows in v1.1 (the paper says their warm-up differs from
+# the other agent windows). If the gap survives the warm-up, it is not compilation, and the paper says so.
+#
+# 4 runs on one B200 (2 batches x 2 repeats).
+matrix_version: 2
+planner:
+  kv_sizing: pool_tokens
+  pool_margin: 0.95
+
+defaults:
+  repeats: 2
+  min_window_s: 60
+  min_tokens: 20000
+  idle_window_s: 60
+  idle_drift_tolerance: 0.05
+  warmup_requests: 4
+  temperature: 0.0
+  seed: 20261022
+  replay_warmup_steps: 30
+
+context_grid: [1024, 4096, 16384, native_max]
+
+cells:
+  - id: c8_agent_replay
+    block: K
+    phase: composite
+    description: 30-step synthetic agent (fixed replay harness); agents alone and concurrent
+    vary:
+      target_batch: [1, 8]
+    fixed:
+      steps: 30
+      context_start: 10240
+      context_step: 2048
+      out_per_step: 300
+      cache_policy: controlled
+    context_cap: native_max
+    only_models: [deepseek-v2-lite]
+    only_accelerators: [b200]

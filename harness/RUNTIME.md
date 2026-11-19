@@ -1,6 +1,6 @@
-# Harness versions used by the 917 runs
+# Harness versions used by the corpus runs
 
-`harness/` is the metering harness as it stood at commit `e14783d` (25 Oct 2026), the last version used in the campaign. Each run in the corpus records the commit it ran under (`harness_commit` in `data/store_tables/cells.parquet`). To rebuild an earlier version, apply its patch to this snapshot from inside `harness/`, for example `git apply runtime_patches/416f489.patch`.
+`harness/config`, `harness/meter` and `harness/pyproject.toml` are the metering harness as it stood at commit `e14783d` (25 Oct 2026), the last version used in version 1.0's campaign. `harness/replication/` holds the harness of the replication (see below). Each run in the corpus records the commit it ran under (`harness_commit` in `data/store_tables/cells.parquet`). To rebuild an earlier version, apply its patch to this snapshot from inside `harness/`, for example `git apply runtime_patches/416f489.patch`.
 
 | Commit | Date (UTC+1) | Runs | Change |
 |---|---|---|---|
@@ -18,4 +18,35 @@
 | `1053950` | 2026-10-24 20:49 | 6 | router pass: --enforce-eager for hooked servers (CUDA-graph decode left the capture buffer holding the dummy run's identical routing); diag records survive harvest |
 | `88424d7` | 2026-10-25 13:57 | 1 | campaign: do not rerun B_max observations (target batch unreachable is a measurement, not a fault) |
 
-Not included here because no run in the corpus used them: the blind-test endpoint, the observation-calibration set, the pod bootstrap script and the harness's own test suite.
+
+## The replication (9 to 14 November 2026)
+
+The replication's 1,610 runs used 12 later versions, listed below with what each changed. Runs are counted from `harness_commit` in `data/store_tables/cells.parquet`; dates are the commit times (UTC). The code of the last of them is in `harness/replication/` (see the end of this file). Each replication run's own settings are in its raw record (`cell.json`: the run's settings, the protocol and the server's full launch command), and `data/server_settings.csv` gathers the server settings of every run.
+
+| Commit | Date (UTC) | Runs | Change |
+|---|---|---|---|
+| `adb8baf` | 2026-11-09 09:44 | 19 | Replication preparation: harness fixes, H200, Gemma-3-27B and gpt-oss-120b, the replication matrix |
+| `20f8dd6` | 2026-11-09 13:44 | 189 | Prefill and cached-prefix prompts for the replication cells (dispatch on phase) |
+| `0dc03ee` | 2026-11-09 14:13 | 88 | Load generator: no minimum-tokens setting (vLLM rejects it under speculative decoding) |
+| `57353cb` | 2026-11-09 14:42 | 302 | The log-probability probe cell and the speculation and precision detectors |
+| `148897f` | 2026-11-09 16:55 | 521 | Run sheet change only (no change to measurement) |
+| `b391aa8` | 2026-11-10 10:40 | 262 | Llama-3.3-70B nvfp4 cells at a memory offer of 0.7 (the 0.8 servers ran out of memory) |
+| `f6f6d2b` | 2026-11-11 14:48 | 108 | Plans for the rerun of runs that lost their cache and for the Qwen3-235B-A22B size runs |
+| `cf6a53a` | 2026-11-12 15:59 | 31 | Decode beyond a target batch of 256; server-side latency pages |
+| `1b4d07b` | 2026-11-13 13:29 | 40 | Rerun of the simulated agent (c8) on the corrected replay script |
+| `a5e69c3` | 2026-11-14 10:48 | 42 | Model weights downloaded before the server starts, timed and logged |
+| `3456750` | 2026-11-14 14:26 | 4 | Simulated agent: optional warm-up replay; DeepSeek-V2-Lite B200 rerun plan |
+| `431d47a` | 2026-11-14 17:19 | 4 | Simulated agent: DeepSeek-V2-Lite H100 warm-up rerun plan |
+
+Between the periods the meter's code (`meter/power.py`) was restructured: the NVIDIA reading moved into an `NvmlSource` class. The measurement is the same in every version: each window's energy is the difference of the board's cumulative energy counter between the window's start and end, summed over the GPUs, with 0.1 s power samples kept alongside. Every window in the corpus took its energy from that counter (`energy_sources` in `cells.parquet`).
+
+### The replication snapshot
+
+`harness/replication/` holds the harness as it stood at the last of these versions (commit `431d47a`): the `meter` package, the settings files in `config/` and `pyproject.toml`. It is the code that ran, with these omissions and edits:
+
+- **Left out, because no run in the corpus used them:** the modules and settings files for accelerators this paper does not report, for endpoint tests that are not part of this paper, and for the harness's test server; the pod bootstrap script; the harness's test suite.
+- **Removed from `config/serving.yaml`:** the entries for those accelerators.
+- **Comments and descriptions:** those that discussed that other work were removed, and a few were reworded.
+- **Message strings:** three were reworded (an option's help text, a plan label and a note). No other statement of code was changed.
+
+The code paths that would call the omitted modules remain in the shared files, and no run in the corpus takes them. The snapshot's dry-run planner (`python -m meter.campaign --mode campaign --dry-run ...`) gives the same run plans as the unedited code for the replication's settings files. The 11 earlier replication versions are described in the table above and are not rebuilt by patch.
